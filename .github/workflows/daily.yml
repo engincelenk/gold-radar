@@ -76,6 +76,7 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NOTIFY_DAILY: ${{ vars.NOTIFY_DAILY }}
+          GOLDPRICE_API_KEY: ${{ secrets.GOLDPRICE_API_KEY }}
         run: |
           # Push-Nachrichten nur im Tagesabschluss-Lauf (22 Uhr UTC) und bei manuellem/Code-Start
           if [ "$AUTO" != "true" ] || [ "$(date -u +%H)" = "22" ]; then NOTIFY="--notify"; fi

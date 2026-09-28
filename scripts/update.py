@@ -26,6 +26,7 @@ import pandas as pd
 import requests
 
 import news
+import spot as spotmod
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "data.json"
@@ -368,6 +369,19 @@ def main() -> int:
         "eurusd": round(eur, 4),
         "usdtry": round(tl, 4),
     }
+
+    # Echter Spotpreis (goldprice.dev) zusätzlich zum Future GC=F oben – siehe scripts/spot.py.
+    # Ohne GOLDPRICE_API_KEY oder bei ausgeschöpftem Monatsbudget bleibt der zuletzt bekannte Wert stehen.
+    spot_price, spot_usage = spotmod.get_spot(prev, os.getenv("GOLDPRICE_API_KEY"))
+    res["spot_usage"] = spot_usage
+    if spot_price:
+        s = spot_price["usd_oz"]
+        res["spot"] = {
+            **spot_price,
+            "eur_oz": round(s / eur, 2), "eur_g": round(s / eur / GRAM_PER_OZ, 2),
+            "usd_g": round(s / GRAM_PER_OZ, 2),
+            "try_oz": round(s * tl, 2), "try_g": round(s * tl / GRAM_PER_OZ, 2),
+        }
     res["updated"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
 
     print("Lade Preisverläufe …")

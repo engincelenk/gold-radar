@@ -35,6 +35,20 @@ Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Act
 - Einmal pro Tag (22 Uhr UTC) und bei jedem Code-Start committet der Bot zusätzlich `docs/data.json` nach `main`. Das ist der Rückfall der Seite, falls der `data`-Branch nicht erreichbar ist.
 - Die Seite warnt, wenn die Daten älter als 3 Stunden sind. `python deploy.py --status` zeigt die Frische ebenfalls an.
 
+## Spotpreis (optional, zusätzlich zum Future)
+Der Future `GC=F` (Chart, Signale) weicht üblicherweise 0,2–1 % vom Spotpreis ab, den z. B. finanzen.net oder die
+Deutsche Börse zeigen (Termin- vs. Kassamarkt). `scripts/spot.py` holt zusätzlich den echten Spotpreis von
+[goldprice.dev](https://goldprice.dev) und zeigt ihn oben als Hauptzahl.
+
+**Einrichtung (optional, ohne geht alles wie bisher mit dem Future als Hauptzahl):**
+1. Kostenlosen Account auf https://goldprice.dev anlegen (keine Kreditkarte nötig) und einen API-Key erzeugen.
+2. GitHub → Repo → *Settings → Secrets and variables → Actions → New repository secret* → Name `GOLDPRICE_API_KEY`, Wert = der Key.
+
+Der Gratis-Plan erlaubt 1.000 Anrufe/Monat. `scripts/spot.py` (`should_fetch`) verteilt ein Budget von 950 gleichmäßig
+über den Kalendermonat statt ein festes Intervall zu nutzen – das entspricht im Schnitt ca. 45–46 Minuten zwischen zwei
+Abrufen bei einem Lauf alle 15 Minuten, holt nach einer Pause aber automatisch auf und überschreitet das Budget nie.
+Getestet in `tests/test_spot.py`, u. a. mit einem simulierten 30-Tage-Monat im 15-Minuten-Takt.
+
 ## Preisgrafik
 Goldpreis (Future `GC=F`) für Heute, Woche, Monat, Jahr, 10 Jahre und Max, umschaltbar zwischen Euro, US-Dollar und Türkischer Lira.
 Euro = Dollar-Kurs ÷ EUR/USD, Lira = Dollar-Kurs × USD/TRY, jeweils zum selben Zeitpunkt (vor Dezember 2003 gibt es keinen Euro-Kurs, vor Februar 2005 keinen Lira-Kurs).

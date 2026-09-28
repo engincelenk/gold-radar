@@ -24,5 +24,6 @@ python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Son
 - Der Worker braucht das Cloudflare-Secret `GITHUB_TOKEN` (Fine-grained, nur dieses Repo, Actions: Read and write). Tokens nie in Dateien oder Chat schreiben. Test: `node worker/test.mjs`.
 - Vor `git pull`/`push` von Hand bedenken: `main` bekommt Bot-Commits; `deploy.py` rebased automatisch.
 - Nachrichten-Regeln: `RULES` in `scripts/news.py`. Kauf-/Verkaufssignal: `CFG` in `scripts/update.py`.
+- Spotpreis (goldprice.dev) ist optional: `scripts/spot.py`, Secret `GOLDPRICE_API_KEY`. Budget 950 Anrufe/Monat, verteilt über `should_fetch()` (nicht fest verdrahtetes Intervall) – bei Änderungen daran immer `tests/test_spot.py` laufen lassen, insbesondere `test_never_exceeds_budget_even_with_frequent_calls`.
 - Lokal testen: Daten mit `python scripts/update.py` erzeugen (Abhängigkeiten aus `requirements.txt`), dann `docs/` mit `python -m http.server` ansehen. Das schreibt `docs/data.json`; diese Änderung nicht mitcommitten, wenn sie nur lokaler Test ist.
 - Unter Windows kann der lokale DNS-Cache neue Domains verzögert kennen; `deploy.py` umgeht das bei der Live-Prüfung.

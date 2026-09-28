@@ -132,6 +132,7 @@ a{color:var(--gold)}
     <h1 class="verdict" id="verdict" data-tone="hold">…</h1>
     <p class="sub" id="sub"></p>
     <div class="prices" id="prices"></div>
+    <p class="sub" id="spotNote" hidden></p>
     <p class="band" id="band"></p>
     <div class="scale" aria-hidden="true">
       <div class="track" id="track"><div class="pin" id="pin" style="left:50%"></div></div>
@@ -180,6 +181,7 @@ a{color:var(--gold)}
 
   <footer>
     <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre vom US-Finanzministerium (Fallback FRED). Euro-Preise = Dollar-Preis geteilt durch den EUR/USD-Kurs, Lira-Preise = Dollar-Preis mal USD/TRY-Kurs, jeweils zum selben Zeitpunkt; vor Dezember 2003 gibt es keine Euro-Kurve, vor Februar 2005 keine Lira-Kurve. Nachrichten: finanzen.net (News und Analysen) sowie Ersatzquellen, falls finanzen.net Abrufe sperrt.</p>
+    <p>Der Future GC=F (COMEX) weicht üblicherweise um 0,2–1 % vom Spotpreis ab, den z.&nbsp;B. finanzen.net oder die Deutsche Börse zeigen. Wo verfügbar, kommt der Spotpreis oben zusätzlich von <a href="https://goldprice.dev" rel="noopener">goldprice.dev</a>, budgetiert auf ca. alle 45 Minuten (kostenloser Plan); die Preisgrafik und die vier Werkzeuge unten rechnen weiter mit dem Future, weil er alle 15 Minuten verfügbar ist.</p>
     <p>Aktualisierung alle 15 Minuten durch GitHub Actions (geplante Läufe können sich um einige Minuten verspäten). Die Kurse stammen von Yahoo Finance und sind gegenüber dem Markt um einige Minuten verzögert. Am Wochenende und nach Handelsschluss zeigt „Heute“ die zuletzt abgeschlossene Handelssitzung. Das Kauf-/Verkaufssignal rechnet tagsüber mit dem aktuellen Kurs und ist erst nach Handelsschluss endgültig; Push-Nachrichten kommen nur nach dem Tagesabschluss.</p>
     <p>Keine Anlageberatung. Die Signale sind eine regelbasierte Einordnung, keine Prognose.</p>
   </footer>
@@ -233,17 +235,33 @@ function mini(el, labels, sets, yOpts = {}) {
 
 /* ---------- Kopf, Preise ---------- */
 function renderHero() {
-  const p = D.prices, c = state.cur;
+  const p = D.prices, s = D.spot, c = state.cur;
   const chg = D.change ? D.change[c] : null;
   const chgHtml = chg == null ? "" :
     `<span class="chg ${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "▲" : "▼"} ${signed(chg, 2)} % zum Vortag</span>`;
+
+  // Spotpreis (echter Marktpreis, z. B. wie bei finanzen.net) ist die Hauptzahl, sobald vorhanden;
+  // ohne Spot-Anbindung bleibt der Future GC=F die Hauptzahl (bisheriges Verhalten).
+  const main = s || p;
   document.getElementById("prices").innerHTML =
-    `<div>${money(p[c + "_oz"])}${chgHtml}<small>pro Unze</small></div>
-     <div>${money(p[c + "_g"], 2)}<small>pro Gramm</small></div>`;
+    `<div>${money(main[c + "_oz"])}${s ? "" : chgHtml}<small>${s ? "pro Unze · Spot" : "pro Unze"}</small></div>
+     <div>${money(main[c + "_g"], 2)}<small>pro Gramm</small></div>`;
+
+  const spotNote = document.getElementById("spotNote");
+  if (s) {
+    const ago2 = ago(s.fetched_at);
+    spotNote.hidden = false;
+    spotNote.innerHTML =
+      `Spotpreis (goldprice.dev, echter Marktpreis wie z. B. bei finanzen.net), aktualisiert ${ago2 || "gerade eben"}. ` +
+      `Future-Preis (Basis für Chart und Signale unten, GC=F): <b>${money(p[c + "_oz"])}</b> pro Unze` + chgHtml;
+  } else {
+    spotNote.hidden = true;
+  }
+
   const band = D["fair_band_" + c];
   document.getElementById("band").innerHTML =
     (band ? `Fairer Bereich pro Unze (zwischen 200- und 50-Tage-Schnitt): <b>${money(Math.min(...band))} – ${money(Math.max(...band))}</b><br>` : "") +
-    `Pro Unze in allen Währungen: ${fmt(p.eur_oz, 0)} € · ${fmt(p.usd_oz, 0)} $ · ${fmt(p.try_oz, 0)} ₺ ` +
+    `Pro Unze in allen Währungen (${s ? "Spot" : "Future"}): ${fmt(main.eur_oz, 0)} € · ${fmt(main.usd_oz, 0)} $ · ${fmt(main.try_oz, 0)} ₺ ` +
     `(1 € = ${fmt(p.eurusd, 4)} $, 1 $ = ${fmt(p.usdtry, 2)} ₺)`;
 }
 
