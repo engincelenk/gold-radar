@@ -74,13 +74,42 @@ def price(yahoo_sym: str, stooq_sym: str) -> pd.Series:
 
 def fred(series_id: str) -> pd.Series:
     """FRED CSV-Export, kein API-Key nötig."""
-    r = requests.get("https://fred.stlouisfed.org/graph/fredgraph.csv", params={"id": series_id}, headers=UA, timeout=30)
+    r = requests.get("https://fred.stlouisfed.org/graph/fredgraph.csv", params={"id": series_id}, headers=UA, timeout=15)
     r.raise_for_status()
     df = pd.read_csv(io.StringIO(r.text))
     date_col = df.columns[0]  # 'observation_date' (neu) oder 'DATE' (alt)
     s = pd.to_numeric(df[series_id], errors="coerce")
     s.index = pd.to_datetime(df[date_col])
     return s.dropna()
+
+
+def treasury_real(years: int = 3) -> pd.Series:
+    """10J-Realrendite direkt vom US-Finanzministerium (identisch zu FRED DFII10)."""
+    frames = []
+    for y in range(datetime.now(timezone.utc).year - years + 1, datetime.now(timezone.utc).year + 1):
+        r = requests.get(
+            f"https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{y}/all",
+            params={"type": "daily_treasury_real_yield_curve", "field_tdr_date_value": y, "page": "", "_format": "csv"},
+            headers=UA, timeout=30,
+        )
+        r.raise_for_status()
+        frames.append(pd.read_csv(io.StringIO(r.text)))
+    df = pd.concat(frames)
+    s = pd.to_numeric(df["10 YR"], errors="coerce")
+    s.index = pd.to_datetime(df["Date"], format="%m/%d/%Y")
+    return s.dropna().sort_index()
+
+
+def real_yield() -> pd.Series:
+    for fn in (treasury_real, lambda: fred("DFII10")):
+        try:
+            s = fn()
+            if len(s) > 200:
+                print(f"  Realzins: {len(s)} Tage")
+                return s
+        except Exception as e:  # noqa: BLE001
+            print(f"  Realzins-Quelle fehlgeschlagen: {e}")
+    raise RuntimeError("Keine Realzins-Daten (Treasury und FRED)")
 
 
 # ---------- Indikatoren ----------
@@ -239,7 +268,7 @@ def main() -> int:
     silver = price("SI=F", "xagusd")
     eurusd = price("EURUSD=X", "eurusd")
     usdtry = price("TRY=X", "usdtry")
-    real = fred("DFII10")
+    real = real_yield()
 
     res = analyse(gold, silver, real)
     g = res["gold_usd_oz"]
