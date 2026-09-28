@@ -122,9 +122,11 @@ a{color:var(--gold)}
       <div class="seg" role="group" aria-label="Währung" id="curSeg">
         <button type="button" data-cur="eur" aria-pressed="true">€ Euro</button>
         <button type="button" data-cur="usd" aria-pressed="false">$ US-Dollar</button>
+        <button type="button" data-cur="try" aria-pressed="false">₺ Lira</button>
       </div>
     </div>
   </header>
+  <div id="stale"></div>
 
   <section class="hero" aria-live="polite">
     <h1 class="verdict" id="verdict" data-tone="hold">…</h1>
@@ -177,8 +179,8 @@ a{color:var(--gold)}
   </div>
 
   <footer>
-    <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre vom US-Finanzministerium (Fallback FRED). Euro-Preise = Dollar-Preis geteilt durch den EUR/USD-Kurs zum selben Zeitpunkt; vor Dezember 2003 gibt es keine Euro-Kurve. Nachrichten: finanzen.net (News und Analysen) sowie Ersatzquellen, falls finanzen.net Abrufe sperrt.</p>
-    <p>Aktualisierung werktags nach US-Handelsschluss. „Heute“ zeigt daher die zuletzt abgeschlossene Handelssitzung.</p>
+    <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre vom US-Finanzministerium (Fallback FRED). Euro-Preise = Dollar-Preis geteilt durch den EUR/USD-Kurs, Lira-Preise = Dollar-Preis mal USD/TRY-Kurs, jeweils zum selben Zeitpunkt; vor Dezember 2003 gibt es keine Euro-Kurve, vor Februar 2005 keine Lira-Kurve. Nachrichten: finanzen.net (News und Analysen) sowie Ersatzquellen, falls finanzen.net Abrufe sperrt.</p>
+    <p>Aktualisierung alle 15 Minuten durch GitHub Actions (geplante Läufe können sich um einige Minuten verspäten). Die Kurse stammen von Yahoo Finance und sind gegenüber dem Markt um einige Minuten verzögert. Am Wochenende und nach Handelsschluss zeigt „Heute“ die zuletzt abgeschlossene Handelssitzung. Das Kauf-/Verkaufssignal rechnet tagsüber mit dem aktuellen Kurs und ist erst nach Handelsschluss endgültig; Push-Nachrichten kommen nur nach dem Tagesabschluss.</p>
     <p>Keine Anlageberatung. Die Signale sind eine regelbasierte Einordnung, keine Prognose.</p>
   </footer>
 </main>
@@ -205,9 +207,10 @@ const RANGES = [["day", "Heute"], ["week", "Woche"], ["month", "Monat"], ["year"
 const TZ = "Europe/Berlin";
 const GRAIN = {"5m": "5-Minuten-Werte", "15m": "15-Minuten-Werte", "60m": "Stundenwerte", "1d": "Tagesschlusskurse", "1wk": "Wochenwerte", "1mo": "Monatswerte"};
 
-const state = {cur: store.get("gr-cur") === "usd" ? "usd" : "eur", range: store.get("gr-range") || "month"};
+const CUR = {eur: {sym: "€", sfx: "_eur"}, usd: {sym: "$", sfx: ""}, try: {sym: "₺", sfx: "_try"}};
+const state = {cur: CUR[store.get("gr-cur")] ? store.get("gr-cur") : "eur", range: store.get("gr-range") || "month"};
 let D = null, priceChart = null, toolCharts = [];
-const sym = () => state.cur === "eur" ? "€" : "$";
+const sym = () => CUR[state.cur].sym;
 const money = (n, d = 0) => `${fmt(n, d)} ${sym()}`;
 
 Chart.defaults.color = css("--muted");
@@ -230,19 +233,18 @@ function mini(el, labels, sets, yOpts = {}) {
 
 /* ---------- Kopf, Preise ---------- */
 function renderHero() {
-  const p = D.prices;
-  const eur = state.cur === "eur";
-  const chg = D.change ? D.change[state.cur] : null;
+  const p = D.prices, c = state.cur;
+  const chg = D.change ? D.change[c] : null;
   const chgHtml = chg == null ? "" :
     `<span class="chg ${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "▲" : "▼"} ${signed(chg, 2)} % zum Vortag</span>`;
   document.getElementById("prices").innerHTML =
-    `<div>${money(eur ? p.eur_oz : p.usd_oz)}${chgHtml}<small>pro Unze</small></div>
-     <div>${money(eur ? p.eur_g : p.usd_g, 2)}<small>pro Gramm</small></div>
-     <div>${fmt(p.try_g, 0)} ₺<small>Gramm-Gold</small></div>`;
-  const band = (eur ? D.fair_band_eur : D.fair_band_usd);
-  document.getElementById("band").innerHTML = band
-    ? `Fairer Bereich pro Unze (zwischen 200- und 50-Tage-Schnitt): <b>${money(Math.min(...band))} – ${money(Math.max(...band))}</b>`
-    : "";
+    `<div>${money(p[c + "_oz"])}${chgHtml}<small>pro Unze</small></div>
+     <div>${money(p[c + "_g"], 2)}<small>pro Gramm</small></div>`;
+  const band = D["fair_band_" + c];
+  document.getElementById("band").innerHTML =
+    (band ? `Fairer Bereich pro Unze (zwischen 200- und 50-Tage-Schnitt): <b>${money(Math.min(...band))} – ${money(Math.max(...band))}</b><br>` : "") +
+    `Pro Unze in allen Währungen: ${fmt(p.eur_oz, 0)} € · ${fmt(p.usd_oz, 0)} $ · ${fmt(p.try_oz, 0)} ₺ ` +
+    `(1 € = ${fmt(p.eurusd, 4)} $, 1 $ = ${fmt(p.usdtry, 2)} ₺)`;
 }
 
 /* ---------- Preisgrafik ---------- */
@@ -284,9 +286,15 @@ function renderPrice() {
   if (!avail.includes(state.range)) state.range = avail.includes("month") ? "month" : avail[0];
   document.querySelectorAll("#rangeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.range === state.range)));
 
-  const c = D.charts[state.range], vals = c[state.cur];
-  const idx = c.t.map((_, i) => i).filter(i => vals[i] != null);   // Euro-Kurve beginnt erst 2003
+  const c = D.charts[state.range], vals = c[state.cur] || [];
+  const idx = c.t.map((_, i) => i).filter(i => vals[i] != null);   // Euro-Kurve beginnt erst 2003, Lira 2005
   const t = idx.map(i => c.t[i]), y = idx.map(i => vals[i]);
+  if (!y.length) {
+    if (priceChart) { priceChart.destroy(); priceChart = null; }
+    document.getElementById("pstats").textContent = "";
+    document.getElementById("pnote").textContent = "Für diese Währung liegen in diesem Zeitraum keine Kurse vor.";
+    return;
+  }
   const first = y[0], last = y[y.length - 1], hi = Math.max(...y), lo = Math.min(...y);
   const vsPrev = state.range === "day" && D.change;   // "Heute": Änderung zum Schlusskurs des Vortags wie oben im Kopf
   const ch = vsPrev ? D.change[state.cur] : (last / first - 1) * 100;
@@ -295,7 +303,8 @@ function renderPrice() {
      <span>Hoch<b>${money(hi)}</b></span><span>Tief<b>${money(lo)}</b></span><span>Zuletzt<b>${money(last)}</b></span>`;
   document.getElementById("pnote").textContent =
     `Preis pro Feinunze (31,1 g), Gold-Future, ${GRAIN[c.interval] || "Werte"}. Zeiten in deutscher Zeit. Stand der Daten: ${fullLabel("day", t[t.length - 1])}.` +
-    (state.range === "max" && state.cur === "eur" ? " Die Euro-Kurve beginnt im Dezember 2003, davor gibt es keinen EUR/USD-Kurs." : "");
+    (state.range === "max" && state.cur === "eur" ? " Die Euro-Kurve beginnt im Dezember 2003, davor gibt es keinen EUR/USD-Kurs." : "") +
+    (state.range === "max" && state.cur === "try" ? " Die Lira-Kurve beginnt im Februar 2005 (Einführung der neuen Lira)." : "");
 
   const labels = t.map(x => labelFor(state.range, x));
   if (priceChart) priceChart.destroy();
@@ -320,7 +329,7 @@ function renderPrice() {
 /* ---------- Werkzeuge ---------- */
 function renderTools() {
   toolCharts.forEach(c => c.destroy()); toolCharts = [];
-  const S = D.series, L = S.dates, eur = state.cur === "eur";
+  const S = D.series, L = S.dates, sfx = CUR[state.cur].sfx;
   const wrap = document.getElementById("tools");
   wrap.innerHTML = "";
   D.indicators.forEach(ind => {
@@ -335,9 +344,9 @@ function renderTools() {
     const c = el.querySelector("canvas");
     const flat = (val) => L.map(() => val);
     if (ind.key === "ma") mini(c, L, [
-      {label: `Gold ${sym()}/oz`, data: eur ? S.gold_eur : S.gold, borderColor: css("--gold")},
-      {label: "50 Tage", data: eur ? S.sma50_eur : S.sma50, borderColor: css("--silver"), borderDash: [4, 3], borderWidth: 1.2},
-      {label: "200 Tage", data: eur ? S.sma200_eur : S.sma200, borderColor: css("--muted"), borderWidth: 1.2}]);
+      {label: `Gold ${sym()}/oz`, data: S["gold" + sfx], borderColor: css("--gold")},
+      {label: "50 Tage", data: S["sma50" + sfx], borderColor: css("--silver"), borderDash: [4, 3], borderWidth: 1.2},
+      {label: "200 Tage", data: S["sma200" + sfx], borderColor: css("--muted"), borderWidth: 1.2}]);
     if (ind.key === "rate") mini(c, L, [
       {label: "Realzins %", data: S.real, borderColor: css("--silver")}]);
     if (ind.key === "gsr") mini(c, L, [
@@ -419,10 +428,24 @@ function renderNews() {
 }
 
 /* ---------- Gesamt ---------- */
+function renderStale(d) {
+  const box = document.getElementById("stale");
+  box.innerHTML = "";
+  const hours = (Date.now() - new Date(d.updated)) / 36e5;
+  if (!(hours > 3)) return;   // der Lauf kommt alle 15 Minuten (auch am Wochenende); über 3 Stunden ohne Update ist eine Störung
+  const age = hours < 48 ? `${Math.floor(hours)} Stunden` : `${Math.floor(hours / 24)} Tage`;
+  box.appendChild(el("p", "warn", `Achtung: Die Daten sind ${age} alt (Stand ${new Date(d.updated).toLocaleString("de-DE", {timeZone: TZ})}). Der 15-Minuten-Lauf hat offenbar Probleme – Details unter GitHub → Actions.`));
+}
+
 function render(d) {
   D = d;
+  const hasTry = d.prices.try_oz != null && d.series.gold_try;   // ältere data.json kennt die Lira noch nicht
+  document.querySelector('#curSeg [data-cur="try"]').hidden = !hasTry;
+  if (!hasTry && state.cur === "try") state.cur = "eur";
+  syncCurButtons();
+  renderStale(d);
   document.getElementById("stamp").textContent =
-    "Stand " + new Date(d.as_of).toLocaleDateString("de-DE", {day: "numeric", month: "long", year: "numeric"});
+    "Aktualisiert " + new Date(d.updated).toLocaleString("de-DE", {timeZone: TZ, day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"}) + " Uhr";
   const v = document.getElementById("verdict");
   v.textContent = d.verdict.charAt(0) + d.verdict.slice(1).toLowerCase();
   v.dataset.tone = vtone(d.verdict);
@@ -474,15 +497,33 @@ document.getElementById("rangeSeg").addEventListener("click", e => {
 });
 syncCurButtons();
 
-fetch("data.json", {cache: "no-store"})
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(render)
-  .catch(err => {
+/* Der Workflow schreibt alle 15 Minuten in den Branch "data"; docs/data.json ist der tägliche Rückfall. Es gilt der neuere Stand. */
+const SOURCES = [
+  () => `https://raw.githubusercontent.com/engincelenk/gold-radar/data/data.json?t=${Math.floor(Date.now() / 60000)}`,
+  () => `data.json?t=${Math.floor(Date.now() / 60000)}`
+];
+async function loadData() {
+  const res = await Promise.allSettled(SOURCES.map(u =>
+    fetch(u(), {cache: "no-store"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })));
+  const ok = res.filter(r => r.status === "fulfilled").map(r => r.value);
+  if (!ok.length) throw new Error("keine Datenquelle erreichbar");
+  return ok.reduce((a, b) => (new Date(b.updated) > new Date(a.updated) ? b : a));
+}
+async function refresh(first) {
+  try {
+    const d = await loadData();
+    if (!D || d.updated !== D.updated) render(d);   // nur neu zeichnen, wenn es etwas Neues gibt
+  } catch (err) {
     console.error(err);
-    document.getElementById("stamp").textContent = "";
-    document.querySelector(".hero").innerHTML =
-      `<div class="error"><b>Noch keine Daten.</b><p>Starte in GitHub unter Actions → „Gold-Radar Update“ → „Run workflow“ den ersten Lauf. Danach erscheint hier das Signal.</p></div>`;
-  });
+    if (first) {
+      document.getElementById("stamp").textContent = "";
+      document.querySelector(".hero").innerHTML =
+        `<div class="error"><b>Noch keine Daten.</b><p>Starte in GitHub unter Actions → „Gold-Radar Update“ → „Run workflow“ den ersten Lauf. Danach erscheint hier das Signal.</p></div>`;
+    }
+  }
+}
+refresh(true);
+setInterval(() => refresh(false), 5 * 60 * 1000);
 </script>
 </body>
 </html>

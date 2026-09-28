@@ -2,9 +2,9 @@ name: Gold-Radar Update
 
 on:
   schedule:
-    - cron: "30 21 * * 1-5"   # Mo–Fr 21:30 UTC, nach US-Handelsschluss
+    - cron: "*/15 * * * *"    # alle 15 Minuten (GitHub startet geplante Läufe gelegentlich mit einigen Minuten Verspätung)
   workflow_dispatch: {}        # manuell startbar ("Run workflow")
-  push:                        # nach Code-Änderungen sofort neu rechnen (der Bot committet nur docs/data.json, das löst nichts aus)
+  push:                        # nach Code-Änderungen sofort neu rechnen
     branches: [main]
     paths: ["scripts/**", "requirements.txt", ".github/workflows/daily.yml"]
 
@@ -21,24 +21,53 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0       # volle Historie: der Tages-Snapshot prüft, wann data.json zuletzt in main committet wurde
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - run: pip install -r requirements.txt
       - name: Tests (Nachrichten-Regeln)
         run: python -m unittest discover -s tests
+
+      # Der aktuelle Stand liegt im Branch "data" (wird bei jedem Lauf überschrieben, wächst also nicht).
+      # Daraus kommen Signal-Verlauf, letzter gemeldeter Stand und Nachrichten-Fallback.
+      - name: Letzten Stand laden
+        run: |
+          if git fetch origin data && git show FETCH_HEAD:data.json > /tmp/prev.json; then
+            mv /tmp/prev.json docs/data.json
+          else
+            echo "Noch kein data-Branch, nutze docs/data.json aus main"
+          fi
+
       - name: Daten holen, Signal berechnen, Nachrichten auswerten, ggf. benachrichtigen
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NOTIFY_DAILY: ${{ vars.NOTIFY_DAILY }}
-        run: python scripts/update.py
-      - name: Ergebnis committen
+        run: |
+          # Push-Nachrichten nur im Tagesabschluss-Lauf (22 Uhr UTC) und bei manuellem/Code-Start
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(date -u +%H)" = "22" ]; then NOTIFY="--notify"; fi
+          python scripts/update.py $NOTIFY
+
+      - name: Aktuellen Stand im Branch "data" veröffentlichen
         run: |
           git config user.name "gold-radar-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add docs/data.json
-          git diff --staged --quiet || git commit -m "Update $(date -u +%F)"
-          git pull --rebase
-          git push
+          blob=$(git hash-object -w docs/data.json)
+          tree=$(printf '100644 blob %s\tdata.json\n' "$blob" | git mktree)
+          commit=$(git commit-tree "$tree" -m "Daten $(date -u +%FT%H:%MZ)")
+          git push --force origin "$commit:refs/heads/data"
+
+      # Einmal pro Tag (22 Uhr UTC) ein Snapshot in main: Rückfall für die Seite, falls der data-Branch nicht erreichbar ist.
+      - name: Tages-Snapshot in main committen
+        run: |
+          last=$(git log -1 --format=%ct -- docs/data.json)
+          if [ "${{ github.event_name }}" != "schedule" ] || { [ "$(date -u +%H)" = "22" ] && [ $(( $(date +%s) - last )) -gt 10800 ]; }; then
+            git add docs/data.json
+            git diff --staged --quiet || git commit -m "Update $(date -u +%F)"
+            git pull --rebase
+            git push
+          fi

@@ -23,13 +23,20 @@ Schwellen anpassen: `CFG` oben in `scripts/update.py`.
 3. **Dashboard veröffentlichen:** *Settings → Pages → Source: Deploy from a branch → Branch `main`, Ordner `/docs`*.
 4. **Erster Lauf:** *Actions → Gold-Radar Update → Run workflow*. Nach ca. 1 Minute kommt die erste Push-Nachricht, und das Dashboard ist unter `https://<dein-name>.github.io/<repo>/` erreichbar.
 
-Danach läuft alles automatisch Mo–Fr um 21:30 UTC. Eine Nachricht kommt nur, wenn sich das Signal ändert.
+Danach läuft alles automatisch **alle 15 Minuten** (GitHub startet geplante Läufe gelegentlich einige Minuten verspätet).
+Eine Push-Nachricht kommt nur im Tagesabschluss-Lauf (22 Uhr UTC), und nur wenn sich das Signal seit der letzten Meldung geändert hat.
 Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Actions → Variables* → `NOTIFY_DAILY` = `true`.
 
+### Wie die Daten zur Seite kommen
+- Jeder Lauf schreibt den aktuellen Stand als einzelnen Commit in den Branch **`data`** (wird überschrieben, die Historie wächst nicht).
+  Die Seite lädt `https://raw.githubusercontent.com/engincelenk/gold-radar/data/data.json` und lädt sich alle 5 Minuten selbst neu.
+- Einmal pro Tag (22 Uhr UTC) und bei jedem Code-Start committet der Bot zusätzlich `docs/data.json` nach `main`. Das ist der Rückfall der Seite, falls der `data`-Branch nicht erreichbar ist.
+- Die Seite warnt, wenn die Daten älter als 3 Stunden sind. `python deploy.py --status` zeigt die Frische ebenfalls an.
+
 ## Preisgrafik
-Goldpreis (Future `GC=F`) für Heute, Woche, Monat, Jahr, 10 Jahre und Max, umschaltbar zwischen Euro und US-Dollar.
-Euro = Dollar-Kurs ÷ EUR/USD-Kurs zum selben Zeitpunkt (vor Dezember 2003 gibt es keinen Euro-Kurs). Die Signale rechnen immer in Dollar;
-der Währungsschalter ändert nur die Anzeige. Die Daten werden einmal pro Lauf erzeugt, „Heute“ zeigt daher die letzte Handelssitzung.
+Goldpreis (Future `GC=F`) für Heute, Woche, Monat, Jahr, 10 Jahre und Max, umschaltbar zwischen Euro, US-Dollar und Türkischer Lira.
+Euro = Dollar-Kurs ÷ EUR/USD, Lira = Dollar-Kurs × USD/TRY, jeweils zum selben Zeitpunkt (vor Dezember 2003 gibt es keinen Euro-Kurs, vor Februar 2005 keinen Lira-Kurs).
+Die Signale rechnen immer in Dollar; der Währungsschalter ändert nur die Anzeige. Yahoo-Kurse sind einige Minuten verzögert.
 
 ## Nachrichten-Analyse
 `scripts/news.py` liest RSS-Feeds, sucht Meldungen mit möglichem Einfluss auf den Goldpreis und ordnet sie nach festen Regeln ein

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Gold-Radar – Deploy auf GitHub in einem Befehl (nur Standardbibliothek).
+Gold-Radar â€“ Deploy auf GitHub in einem Befehl (nur Standardbibliothek).
 
-    python deploy.py                    # alles committen, pushen, Workflow + Live-Seite prüfen
+    python deploy.py                    # alles committen, pushen, Workflow + Live-Seite prÃ¼fen
     python deploy.py -m "Text"          # eigene Commit-Nachricht
     python deploy.py --no-wait          # nach dem Push beenden
-    python deploy.py --status           # nur Stand anzeigen, nichts ändern
-    python deploy.py --dry-run          # zeigen, was passieren würde
+    python deploy.py --status           # nur Stand anzeigen, nichts Ã¤ndern
+    python deploy.py --dry-run          # zeigen, was passieren wÃ¼rde
 
-Ablauf: Änderungen stagen -> committen -> vom Server holen (rebase, damit Bot-Commits
+Ablauf: Ã„nderungen stagen -> committen -> vom Server holen (rebase, damit Bot-Commits
 mit neuen Daten kein Problem sind) -> pushen -> auf den GitHub-Workflow und den Pages-Build
-warten -> prüfen, dass https://www.gr.immofuchs.info die neuen Daten ausliefert.
-Nie force-push. Bei Konflikten oder Rechte-Fehlern wird abgebrochen und erklärt.
+warten -> prÃ¼fen, dass https://www.gr.immofuchs.info die neuen Daten ausliefert.
+Nie force-push. Bei Konflikten oder Rechte-Fehlern wird abgebrochen und erklÃ¤rt.
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -72,7 +72,7 @@ def ensure_repo() -> None:
         top = out("rev-parse", "--show-toplevel")
     except (Abort, FileNotFoundError) as e:
         raise Abort(f"Kein Git-Repository in {ROOT} (oder git fehlt): {e}") from e
-    if not os.path.samefile(top, ROOT):  # nie versehentlich ein übergeordnetes Repo (z. B. C:\) anfassen
+    if not os.path.samefile(top, ROOT):  # nie versehentlich ein Ã¼bergeordnetes Repo (z. B. C:\) anfassen
         raise Abort(f"{ROOT} ist nicht die Wurzel eines eigenen Git-Repos (gefunden: {top}). Abbruch.")
     if "engincelenk/gold-radar" not in out("remote", "get-url", "origin"):
         raise Abort("Remote 'origin' zeigt nicht auf engincelenk/gold-radar. Abbruch.")
@@ -99,7 +99,7 @@ def find_run(name: str, sha: str) -> dict | None:
 
 
 class _IPConn(http.client.HTTPSConnection):
-    """HTTPS direkt zur GitHub-Pages-IP, aber mit dem richtigen Hostnamen (SNI + Zertifikatsprüfung)."""
+    """HTTPS direkt zur GitHub-Pages-IP, aber mit dem richtigen Hostnamen (SNI + ZertifikatsprÃ¼fung)."""
 
     def connect(self):
         sock = socket.create_connection((PAGES_IP, 443), self.timeout)
@@ -123,25 +123,48 @@ def site_get(path: str) -> tuple[int, bytes]:
         return r.status, r.read()
 
 
+def freshness(updated: str) -> str:
+    """Der Workflow lÃ¤uft alle 15 Minuten; bis 90 Minuten Alter gilt als normal (GitHub startet geplante LÃ¤ufe verspÃ¤tet)."""
+    upd = datetime.fromisoformat(updated)
+    minutes = (datetime.now(timezone.utc) - upd).total_seconds() / 60
+    age = f"{minutes:.0f} Min." if minutes < 180 else f"{minutes / 60:.1f} Std."
+    if minutes > 90:
+        return f"VERALTET â€“ Daten von {upd:%a %d.%m. %H:%M} UTC (vor {age}), der 15-Minuten-Lauf stockt. Actions prÃ¼fen: https://github.com/{REPO}/actions"
+    return f"aktuell (Daten von {upd:%H:%M} UTC, vor {age})"
+
+
+def data_get() -> dict:
+    """Aktueller Stand: erst der Branch 'data' (alle 15 Min.), sonst die tÃ¤glich committete docs/data.json der Seite."""
+    for url in (f"https://raw.githubusercontent.com/{REPO}/data/data.json?t={int(time.time())}", None):
+        try:
+            if url:
+                with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "gold-radar-deploy"}), timeout=20) as r:
+                    return json.loads(r.read().decode("utf-8"))
+            code, body = site_get("/data.json")
+            if code == 200:
+                return json.loads(body.decode("utf-8"))
+        except (urllib.error.URLError, OSError, ValueError):
+            continue
+    raise RuntimeError("weder data-Branch noch Seite liefern data.json")
+
+
 def live_report() -> bool:
     try:
-        code, body = site_get("/data.json")
-        if code != 200:
-            say(f"  Live-Seite: data.json liefert HTTP {code}")
-            return False
-        d = json.loads(body.decode("utf-8"))
+        d = data_get()
         n = d.get("news") or {}
-        say(f"  Live-Seite https://{SITE}: OK")
+        code, _ = site_get("/")
+        say(f"  Live-Seite https://{SITE}: {'OK' if code == 200 else f'HTTP {code}'}")
         say(f"    Signal: {d['verdict']} (Score {d['score']:+d}), Stand {d['as_of']}, aktualisiert {d.get('updated')}")
         say(f"    Charts: {', '.join(d.get('charts', {})) or 'keine'} | News: {n.get('label', 'keine')}")
-        return True
+        say(f"    Frische: {freshness(d['updated'])}")
+        return code == 200
     except Exception as e:  # noqa: BLE001
-        say(f"  Live-Seite nicht prüfbar: {e}")
+        say(f"  Live-Seite nicht prÃ¼fbar: {e}")
         return False
 
 
 def wait_run(name: str, sha: str, appear: int, limit: int) -> dict | None:
-    """Wartet, bis ein Lauf für den Commit erscheint (appear Sekunden) und fertig ist (limit Sekunden)."""
+    """Wartet, bis ein Lauf fÃ¼r den Commit erscheint (appear Sekunden) und fertig ist (limit Sekunden)."""
     start, run = time.time(), None
     while time.time() - start < appear and not run:
         run = find_run(name, sha)
@@ -162,7 +185,7 @@ def status() -> int:
     git("fetch", "origin", check=False)
     say(f"Branch {BRANCH}, Repo {REPO}")
     changes = out("status", "--porcelain")
-    say("Lokale Änderungen:\n" + (changes or "  keine"))
+    say("Lokale Ã„nderungen:\n" + (changes or "  keine"))
     ahead = out("rev-list", "--count", f"origin/{BRANCH}..HEAD")
     behind = out("rev-list", "--count", f"HEAD..origin/{BRANCH}")
     say(f"Vor origin: {ahead} Commit(s), hinter origin: {behind} Commit(s)")
@@ -206,7 +229,7 @@ def sync() -> None:
     p = git("pull", "--rebase", "--autostash", "origin", BRANCH, check=False)
     if p.returncode:
         git("rebase", "--abort", check=False)
-        raise Abort("Zusammenführen mit dem Server ist gescheitert (Konflikt?). Rebase wurde abgebrochen, "
+        raise Abort("ZusammenfÃ¼hren mit dem Server ist gescheitert (Konflikt?). Rebase wurde abgebrochen, "
                     "nichts wurde gepusht.\n" + (p.stderr or p.stdout).strip(), 2)
 
 
@@ -217,7 +240,7 @@ def push() -> None:
         hint = ""
         if "403" in err or "denied" in err.lower() or "Authentication" in err:
             hint = ("\n\nKeine Schreibrechte: Der gespeicherte GitHub-Login hat keinen Zugriff. Neuen Token (Scopes repo + workflow) "
-                    "anlegen, alten Eintrag löschen und einmal in einer Konsole pushen:\n"
+                    "anlegen, alten Eintrag lÃ¶schen und einmal in einer Konsole pushen:\n"
                     '  "protocol=https`nhost=github.com`n" | git credential-manager erase   (PowerShell)\n'
                     "  git push origin main")
         raise Abort(f"Push fehlgeschlagen:\n{err}{hint}", 3)
@@ -228,8 +251,8 @@ def deploy(args: argparse.Namespace) -> int:
     changes = out("status", "--porcelain")
     ahead = int(out("rev-list", "--count", f"origin/{BRANCH}..HEAD"))
     if args.dry_run:
-        say("Trockenlauf – es würde passieren:")
-        say("  Lokale Änderungen:\n" + ("    " + changes.replace("\n", "\n    ") if changes else "    keine"))
+        say("Trockenlauf â€“ es wÃ¼rde passieren:")
+        say("  Lokale Ã„nderungen:\n" + ("    " + changes.replace("\n", "\n    ") if changes else "    keine"))
         say(f"  Ungepushte Commits: {ahead}")
         return 0
 
@@ -240,7 +263,7 @@ def deploy(args: argparse.Namespace) -> int:
         say("Nichts zu deployen: lokal und GitHub sind identisch.")
         live_report()
         return 0
-    say(f"Pushe {ahead} Commit(s) nach origin/{BRANCH} …")
+    say(f"Pushe {ahead} Commit(s) nach origin/{BRANCH} â€¦")
     push()
     sha = out("rev-parse", "HEAD")
     say(f"Gepusht: {sha[:7]} {out('log', '-1', '--format=%s')}" + ("" if committed else "  (nur bereits vorhandene Commits)"))
@@ -248,17 +271,17 @@ def deploy(args: argparse.Namespace) -> int:
         return 0
 
     final = sha
-    say("Warte auf den Workflow …")
+    say("Warte auf den Workflow â€¦")
     run = wait_run(WORKFLOW, sha, appear=45, limit=360)
     if run is None:
-        say("  Kein Workflow-Lauf nötig (keine Änderung an scripts/, requirements.txt oder daily.yml).")
+        say("  Kein Workflow-Lauf nÃ¶tig (keine Ã„nderung an scripts/, requirements.txt oder daily.yml).")
     elif run["status"] != "completed":
-        say("  Workflow läuft noch – ich warte nicht länger. Später prüfen mit: python deploy.py --status")
+        say("  Workflow lÃ¤uft noch â€“ ich warte nicht lÃ¤nger. SpÃ¤ter prÃ¼fen mit: python deploy.py --status")
     elif run["conclusion"] != "success":
         say(f"  WORKFLOW FEHLGESCHLAGEN ({run['conclusion']}). Log: {run['html_url']}")
         return 4
     else:
-        say("  Workflow erfolgreich. Hole die vom Bot erzeugten Daten …")
+        say("  Workflow erfolgreich. Hole die vom Bot erzeugten Daten â€¦")
         for _ in range(6):
             git("fetch", "origin", check=False)
             if out("rev-parse", f"origin/{BRANCH}") != sha:
@@ -267,17 +290,17 @@ def deploy(args: argparse.Namespace) -> int:
         git("pull", "--ff-only", "origin", BRANCH, check=False)
         final = out("rev-parse", "HEAD")
 
-    say("Warte auf GitHub Pages …")
+    say("Warte auf GitHub Pages â€¦")
     pages = wait_run(PAGES_RUN, final, appear=90, limit=240)
     if pages is None:
-        say("  Kein Pages-Build gefunden (evtl. verzögert).")
+        say("  Kein Pages-Build gefunden (evtl. verzÃ¶gert).")
     elif pages["status"] == "completed" and pages["conclusion"] != "success":
         say(f"  PAGES-BUILD FEHLGESCHLAGEN ({pages['conclusion']}): {pages['html_url']}")
         return 5
     else:
         say(f"  Pages: {pages['status']} {pages['conclusion'] or ''}")
     ok = live_report()
-    say("\nDeploy abgeschlossen." if ok else "\nDeploy gepusht, Live-Prüfung aber ohne Erfolg – bitte später erneut mit --status prüfen.")
+    say("\nDeploy abgeschlossen." if ok else "\nDeploy gepusht, Live-PrÃ¼fung aber ohne Erfolg â€“ bitte spÃ¤ter erneut mit --status prÃ¼fen.")
     return 0 if ok else 6
 
 
@@ -286,10 +309,10 @@ def main() -> int:
         stream.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Gold-Radar auf GitHub deployen.")
     ap.add_argument("-m", "--message", help="Commit-Nachricht (sonst automatisch aus den Dateinamen)")
-    ap.add_argument("--co-author", action="append", default=[], metavar='"Name <mail>"', help="Co-Authored-By-Zeile (mehrfach möglich)")
+    ap.add_argument("--co-author", action="append", default=[], metavar='"Name <mail>"', help="Co-Authored-By-Zeile (mehrfach mÃ¶glich)")
     ap.add_argument("--no-wait", action="store_true", help="nach dem Push nicht auf Workflow/Pages warten")
     ap.add_argument("--status", action="store_true", help="nur Stand anzeigen")
-    ap.add_argument("--dry-run", action="store_true", help="nur anzeigen, was passieren würde")
+    ap.add_argument("--dry-run", action="store_true", help="nur anzeigen, was passieren wÃ¼rde")
     args = ap.parse_args()
     try:
         ensure_repo()
