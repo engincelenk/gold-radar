@@ -1,0 +1,33 @@
+name: Gold-Radar Update
+
+on:
+  schedule:
+    - cron: "30 21 * * 1-5"   # Mo–Fr 21:30 UTC, nach US-Handelsschluss
+  workflow_dispatch: {}        # manuell startbar ("Run workflow")
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Daten holen, Signal berechnen, ggf. benachrichtigen
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTIFY_DAILY: ${{ vars.NOTIFY_DAILY }}
+        run: python scripts/update.py
+      - name: Ergebnis committen
+        run: |
+          git config user.name "gold-radar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data.json
+          git diff --staged --quiet || git commit -m "Update $(date -u +%F)"
+          git push

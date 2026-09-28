@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gold-Radar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1b2226; --panel:#222b30; --line:#34414a; --text:#efe9da; --muted:#8e9a9f;
+  --gold:#c8a24a; --silver:#b8c0c6; --buy:#4e9a74; --sell:#c0563f; --hold:#b8a26a;
+  --sans:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.45}
+body{padding:max(20px,env(safe-area-inset-top)) 20px max(32px,env(safe-area-inset-bottom))}
+main{max-width:980px;margin:0 auto}
+header.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
+header.top b{color:var(--text);font-family:var(--cond);font-size:1.25rem;font-weight:600;letter-spacing:.02em}
+
+/* Hero: das Urteil + die Waage */
+.hero{margin:28px 0 36px}
+.verdict{font-family:var(--cond);font-weight:700;font-size:clamp(3.4rem,13vw,7.5rem);line-height:.9;margin:0;letter-spacing:-.01em}
+.verdict[data-tone="buy"]{color:var(--buy)} .verdict[data-tone="sell"]{color:var(--sell)} .verdict[data-tone="hold"]{color:var(--hold)}
+.sub{color:var(--muted);margin:10px 0 0;max-width:62ch}
+.prices{display:flex;gap:28px;flex-wrap:wrap;margin:22px 0 0}
+.prices div{font-family:var(--cond);font-size:1.9rem;font-weight:600}
+.prices small{display:block;font-family:var(--sans);font-size:.8rem;color:var(--muted);font-weight:400}
+
+.scale{margin:34px 0 0}
+.track{position:relative;height:14px;border-radius:7px;
+  background:linear-gradient(90deg,var(--sell) 0%,#6d4a3d 25%,var(--line) 40%,var(--line) 60%,#3f6b57 75%,var(--buy) 100%)}
+.pin{position:absolute;top:-9px;width:4px;height:32px;background:var(--text);border-radius:2px;transform:translateX(-2px);transition:left .9s cubic-bezier(.2,.8,.2,1)}
+.contrib{position:absolute;top:22px;transform:translateX(-50%);font-size:.72rem;color:var(--muted);white-space:nowrap}
+.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;margin-top:30px}
+@media (prefers-reduced-motion:reduce){.pin{transition:none}}
+
+/* Werkzeuge */
+h2{font-family:var(--cond);font-weight:600;font-size:1.6rem;margin:44px 0 6px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:62ch}
+.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:18px}
+.tool{background:var(--panel);border-left:3px solid var(--line);padding:18px 18px 12px;border-radius:2px 8px 8px 2px}
+.tool[data-tone="buy"]{border-left-color:var(--buy)} .tool[data-tone="sell"]{border-left-color:var(--sell)}
+.tool h3{margin:0;font-size:1rem;font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:6px}
+.val{font-family:var(--cond);font-size:2.3rem;font-weight:600;line-height:1}
+.val small{font-size:.95rem;color:var(--muted);font-family:var(--sans);font-weight:400;margin-left:4px}
+.pts{font-family:var(--cond);font-size:1.1rem;font-weight:600;padding:2px 10px;border-radius:12px;background:var(--line)}
+.tool[data-tone="buy"] .pts{background:var(--buy)} .tool[data-tone="sell"] .pts{background:var(--sell)}
+.tool p{margin:8px 0 2px} .tool .extra{color:var(--muted);font-size:.85rem;margin:0}
+.chart{position:relative;height:170px;margin-top:12px}
+
+/* Verlauf */
+.strip{display:flex;gap:2px;height:34px;overflow-x:auto}
+.strip span{flex:0 0 5px;border-radius:1px}
+.legend{display:flex;gap:18px;color:var(--muted);font-size:.85rem;margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+footer{margin-top:48px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px}
+footer p{max-width:70ch}
+.error{background:var(--panel);padding:20px;border-left:3px solid var(--sell)}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<main>
+  <header class="top"><b>Gold-Radar</b><span id="stamp">Lade Daten …</span></header>
+
+  <section class="hero" aria-live="polite">
+    <h1 class="verdict" id="verdict" data-tone="hold">…</h1>
+    <p class="sub" id="sub"></p>
+    <div class="prices" id="prices"></div>
+    <div class="scale" aria-hidden="true">
+      <div class="track" id="track"><div class="pin" id="pin" style="left:50%"></div></div>
+      <div class="ends"><span>Teuer – Gewinne sichern</span><span>Fair</span><span>Günstig – kaufen</span></div>
+    </div>
+  </section>
+
+  <h2>Die vier Werkzeuge</h2>
+  <p class="lede">Jedes Werkzeug gibt zwischen −2 (teuer) und +2 (günstig) Punkte. Ab +2 in Summe heißt es Kaufen, ab −2 Verkaufen.</p>
+  <div class="tools" id="tools"></div>
+
+  <h2>Verlauf des Signals</h2>
+  <p class="lede">Ein Balken pro Handelstag, seit das Radar läuft.</p>
+  <div class="strip" id="strip"></div>
+  <div class="legend">
+    <span><i style="background:var(--buy)"></i>Kaufen</span>
+    <span><i style="background:var(--hold)"></i>Halten</span>
+    <span><i style="background:var(--sell)"></i>Verkaufen</span>
+  </div>
+
+  <footer>
+    <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre (DFII10) von FRED. Aktualisierung werktags nach US-Handelsschluss.</p>
+    <p>Keine Anlageberatung. Die Signale sind eine regelbasierte Einordnung, keine Prognose.</p>
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const tone = s => s > 0 ? "buy" : s < 0 ? "sell" : "hold";
+const vtone = v => v.includes("KAUFEN") && !v.includes("VER") ? "buy" : v.includes("VERKAUFEN") ? "sell" : "hold";
+const fmt = (n, d = 2) => n.toLocaleString("de-DE", {minimumFractionDigits: d, maximumFractionDigits: d});
+const SUB = {
+  "STARK KAUFEN": "Mehrere Werkzeuge zeigen gleichzeitig: Gold liegt unter seinem fairen Bereich.",
+  "KAUFEN": "Gold ist eher günstig. Ein guter Zeitpunkt, schrittweise nachzukaufen.",
+  "HALTEN": "Kein klares Signal. Gold liegt ungefähr im fairen Bereich oder die Werkzeuge widersprechen sich.",
+  "VERKAUFEN": "Gold ist eher teuer. Teilgewinne sichern oder mit Käufen warten.",
+  "STARK VERKAUFEN": "Mehrere Werkzeuge zeigen Überhitzung. Rücksetzer zum fairen Wert sind wahrscheinlich."
+};
+
+Chart.defaults.color = css("--muted");
+Chart.defaults.font.family = css("--sans");
+Chart.defaults.borderColor = css("--line");
+
+function mini(el, labels, sets, yOpts = {}) {
+  new Chart(el, {
+    type: "line",
+    data: {labels, datasets: sets.map(s => ({pointRadius: 0, borderWidth: 1.6, tension: .15, ...s}))},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {legend: {display: false}, tooltip: {filter: i => !i.dataset.hideTip}},
+      scales: {x: {ticks: {maxTicksLimit: 4, maxRotation: 0}, grid: {display: false}},
+               y: {ticks: {maxTicksLimit: 4}, ...yOpts}}
+    }
+  });
+}
+
+function render(d) {
+  document.getElementById("stamp").textContent =
+    "Stand " + new Date(d.as_of).toLocaleDateString("de-DE", {day: "numeric", month: "long", year: "numeric"});
+  const v = document.getElementById("verdict");
+  v.textContent = d.verdict.charAt(0) + d.verdict.slice(1).toLowerCase();
+  v.dataset.tone = vtone(d.verdict);
+  document.getElementById("sub").textContent = `Score ${d.score > 0 ? "+" : ""}${d.score} von ±8. ` + SUB[d.verdict];
+
+  const p = d.prices;
+  document.getElementById("prices").innerHTML =
+    `<div>${fmt(p.eur_g)} €<small>pro Gramm</small></div>
+     <div>${fmt(p.usd_oz, 0)} $<small>pro Unze</small></div>
+     <div>${fmt(p.try_g, 0)} ₺<small>Gramm-Gold</small></div>`;
+
+  const pct = s => ((8 - s) / 16) * 100;  // links teuer (−8), rechts günstig (+8)
+  const track = document.getElementById("track");
+  requestAnimationFrame(() => document.getElementById("pin").style.left = (100 - pct(d.score)) + "%");
+  const short = {ma: "Ø", rate: "Zins", gsr: "G/S", rsi: "RSI"};
+  track.querySelectorAll(".contrib").forEach(n => n.remove());
+  d.indicators.forEach((ind, i) => {
+    if (!ind.score) return;
+    const t = document.createElement("span");
+    t.className = "contrib";
+    t.style.left = (100 - pct(ind.score * 2)) + "%";
+    t.textContent = `${short[ind.key]} ${ind.score > 0 ? "+" : ""}${ind.score}`;
+    track.appendChild(t);
+  });
+
+  const S = d.series, L = S.dates;
+  const wrap = document.getElementById("tools");
+  wrap.innerHTML = "";
+  d.indicators.forEach(ind => {
+    const el = document.createElement("article");
+    el.className = "tool"; el.dataset.tone = tone(ind.score);
+    el.innerHTML = `<h3>${ind.name}</h3>
+      <div class="row"><div class="val">${fmt(ind.value, ind.key === "rate" ? 2 : 1)}<small>${ind.unit}</small></div>
+      <span class="pts">${ind.score > 0 ? "+" : ""}${ind.score}</span></div>
+      <p>${ind.text}</p><p class="extra">${ind.extra}</p>
+      <div class="chart"><canvas aria-label="Verlauf ${ind.name}" role="img"></canvas></div>`;
+    wrap.appendChild(el);
+    const c = el.querySelector("canvas");
+    const flat = (val) => L.map(() => val);
+    if (ind.key === "ma") mini(c, L, [
+      {label: "Gold $/oz", data: S.gold, borderColor: css("--gold")},
+      {label: "50 Tage", data: S.sma50, borderColor: css("--silver"), borderDash: [4, 3], borderWidth: 1.2},
+      {label: "200 Tage", data: S.sma200, borderColor: css("--muted"), borderWidth: 1.2}]);
+    if (ind.key === "rate") mini(c, L, [
+      {label: "Realzins %", data: S.real, borderColor: css("--silver")}]);
+    if (ind.key === "gsr") mini(c, L, [
+      {label: "70", data: flat(70), borderColor: "transparent", hideTip: true},
+      {label: "55", data: flat(55), borderColor: "transparent", fill: "-1", backgroundColor: "rgba(78,154,116,.14)", hideTip: true},
+      {label: "Ratio", data: S.gsr, borderColor: css("--silver")}]);
+    if (ind.key === "rsi") mini(c, L.slice(-120), [
+      {label: "70", data: flat(70).slice(-120), borderColor: css("--sell"), borderDash: [3, 3], borderWidth: 1, hideTip: true},
+      {label: "30", data: flat(30).slice(-120), borderColor: css("--buy"), borderDash: [3, 3], borderWidth: 1, hideTip: true},
+      {label: "RSI", data: S.rsi.slice(-120), borderColor: css("--gold")}], {min: 0, max: 100});
+  });
+
+  const strip = document.getElementById("strip");
+  strip.innerHTML = "";
+  (d.history || []).forEach(h => {
+    const s = document.createElement("span");
+    s.style.background = css("--" + vtone(h.verdict));
+    s.title = `${h.date}: ${h.verdict} (${h.score > 0 ? "+" : ""}${h.score})`;
+    strip.appendChild(s);
+  });
+}
+
+fetch("data.json", {cache: "no-store"})
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(render)
+  .catch(() => {
+    document.getElementById("stamp").textContent = "";
+    document.querySelector(".hero").innerHTML =
+      `<div class="error"><b>Noch keine Daten.</b><p>Starte in GitHub unter Actions → „Gold-Radar Update“ → „Run workflow“ den ersten Lauf. Danach erscheint hier das Signal.</p></div>`;
+  });
+</script>
+</body>
+</html>
