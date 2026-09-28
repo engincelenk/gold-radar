@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Tägliches Kauf-/Verkaufssignal für Gold mit Preisgrafik in Euro und US-Dollar und einer Auswertung aktueller Nachrichten.">
 <title>Gold-Radar</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,17 +20,29 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.45}
 body{padding:max(20px,env(safe-area-inset-top)) 20px max(32px,env(safe-area-inset-bottom))}
 main{max-width:980px;margin:0 auto}
-header.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
-header.top b{color:var(--text);font-family:var(--cond);font-size:1.25rem;font-weight:600;letter-spacing:.02em}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px 20px;flex-wrap:wrap;color:var(--muted);font-size:.9rem}
+header.top b{color:var(--text);font-family:var(--cond);font-size:1.25rem;font-weight:600;letter-spacing:.02em;margin-right:12px}
+.head-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+
+/* Umschalter (Währung, Zeitraum) */
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:.92rem;font-weight:500;min-height:38px;min-width:44px;padding:0 13px;border-radius:6px;cursor:pointer}
+.seg button:hover{color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--gold);color:#1b2226;font-weight:600}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 /* Hero: das Urteil + die Waage */
 .hero{margin:28px 0 36px}
 .verdict{font-family:var(--cond);font-weight:700;font-size:clamp(3.4rem,13vw,7.5rem);line-height:.9;margin:0;letter-spacing:-.01em}
 .verdict[data-tone="buy"]{color:var(--buy)} .verdict[data-tone="sell"]{color:var(--sell)} .verdict[data-tone="hold"]{color:var(--hold)}
 .sub{color:var(--muted);margin:10px 0 0;max-width:62ch}
-.prices{display:flex;gap:28px;flex-wrap:wrap;margin:22px 0 0}
+.prices{display:flex;gap:10px 28px;flex-wrap:wrap;margin:22px 0 0}
 .prices div{font-family:var(--cond);font-size:1.9rem;font-weight:600}
 .prices small{display:block;font-family:var(--sans);font-size:.8rem;color:var(--muted);font-weight:400}
+.chg{font-family:var(--sans);font-size:.85rem;font-weight:500;margin-left:8px;white-space:nowrap}
+.chg.up{color:var(--buy)} .chg.down{color:var(--sell)}
+.band{margin:14px 0 0;color:var(--muted);font-size:.9rem}
+.band b{color:var(--text);font-weight:500}
 
 .scale{margin:34px 0 0}
 .track{position:relative;height:14px;border-radius:7px;
@@ -39,9 +52,20 @@ header.top b{color:var(--text);font-family:var(--cond);font-size:1.25rem;font-we
 .ends{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;margin-top:30px}
 @media (prefers-reduced-motion:reduce){.pin{transition:none}}
 
-/* Werkzeuge */
 h2{font-family:var(--cond);font-weight:600;font-size:1.6rem;margin:44px 0 6px}
 .lede{color:var(--muted);margin:0 0 18px;max-width:62ch}
+
+/* Preisgrafik */
+.pricebox{background:var(--panel);border-radius:8px;padding:16px 16px 12px}
+.pricebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.pstats{display:flex;gap:6px 22px;flex-wrap:wrap;font-size:.9rem;color:var(--muted)}
+.pstats b{color:var(--text);font-family:var(--cond);font-size:1.15rem;font-weight:600;margin-left:4px}
+.pstats .up{color:var(--buy)} .pstats .down{color:var(--sell)}
+.bigchart{position:relative;height:340px}
+.note{color:var(--muted);font-size:.82rem;margin:10px 0 0}
+@media (max-width:560px){.bigchart{height:260px}}
+
+/* Werkzeuge */
 .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:18px}
 .tool{background:var(--panel);border-left:3px solid var(--line);padding:18px 18px 12px;border-radius:2px 8px 8px 2px}
 .tool[data-tone="buy"]{border-left-color:var(--buy)} .tool[data-tone="sell"]{border-left-color:var(--sell)}
@@ -53,6 +77,30 @@ h2{font-family:var(--cond);font-weight:600;font-size:1.6rem;margin:44px 0 6px}
 .tool[data-tone="buy"] .pts{background:var(--buy)} .tool[data-tone="sell"] .pts{background:var(--sell)}
 .tool p{margin:8px 0 2px} .tool .extra{color:var(--muted);font-size:.85rem;margin:0}
 .chart{position:relative;height:170px;margin-top:12px}
+
+/* Nachrichten */
+.newsbox{background:var(--panel);border-radius:8px;padding:18px}
+.newshead{display:flex;gap:6px 18px;align-items:baseline;flex-wrap:wrap}
+.newslabel{font-family:var(--cond);font-weight:700;font-size:2rem;line-height:1.1}
+.newslabel[data-tone="up"]{color:var(--buy)} .newslabel[data-tone="down"]{color:var(--sell)} .newslabel[data-tone="flat"]{color:var(--hold)}
+.newslabel small{font-family:var(--sans);font-weight:400;font-size:.85rem;color:var(--muted);margin-left:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0;padding:0;list-style:none}
+.chip{font-size:.85rem;padding:3px 11px;border-radius:14px;border:1px solid var(--line)}
+.chip.up{border-color:var(--buy);color:#8fd0b0} .chip.down{border-color:var(--sell);color:#e59a88}
+.newslist{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:0}
+.newslist li{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:13px 0;border-top:1px solid var(--line)}
+.badge{font-size:.78rem;font-weight:600;padding:2px 9px;border-radius:5px;height:fit-content;white-space:nowrap;background:var(--line);color:var(--text);min-width:112px;text-align:center}
+.badge.up{background:rgba(78,154,116,.25);color:#8fd0b0} .badge.down{background:rgba(192,86,63,.25);color:#e59a88}
+.newslist a{color:var(--text);text-decoration:none;font-weight:500}
+.newslist a:hover{color:var(--gold);text-decoration:underline}
+.meta{color:var(--muted);font-size:.8rem;margin-top:1px}
+.why{color:var(--muted);font-size:.88rem;margin:3px 0 0}
+.warn{border-left:3px solid var(--hold);padding:8px 12px;margin:14px 0 0;font-size:.88rem;background:rgba(184,162,106,.08)}
+details{margin-top:16px;color:var(--muted);font-size:.85rem}
+summary{cursor:pointer;padding:4px 0}
+details ul{margin:6px 0 0;padding-left:18px}
+.st-ok{color:#8fd0b0} .st-err{color:#e59a88}
+@media (max-width:560px){.newslist li{grid-template-columns:1fr}.badge{justify-self:start;min-width:0}}
 
 /* Verlauf */
 .strip{display:flex;gap:2px;height:34px;overflow-x:auto}
@@ -68,21 +116,56 @@ a{color:var(--gold)}
 </head>
 <body>
 <main>
-  <header class="top"><b>Gold-Radar</b><span id="stamp">Lade Daten …</span></header>
+  <header class="top">
+    <div><b>Gold-Radar</b><span id="stamp">Lade Daten …</span></div>
+    <div class="head-right">
+      <div class="seg" role="group" aria-label="Währung" id="curSeg">
+        <button type="button" data-cur="eur" aria-pressed="true">€ Euro</button>
+        <button type="button" data-cur="usd" aria-pressed="false">$ US-Dollar</button>
+      </div>
+    </div>
+  </header>
 
   <section class="hero" aria-live="polite">
     <h1 class="verdict" id="verdict" data-tone="hold">…</h1>
     <p class="sub" id="sub"></p>
     <div class="prices" id="prices"></div>
+    <p class="band" id="band"></p>
     <div class="scale" aria-hidden="true">
       <div class="track" id="track"><div class="pin" id="pin" style="left:50%"></div></div>
       <div class="ends"><span>Teuer – Gewinne sichern</span><span>Fair</span><span>Günstig – kaufen</span></div>
     </div>
   </section>
 
+  <section id="priceSection" hidden>
+    <h2>Goldpreis</h2>
+    <div class="pricebox">
+      <div class="pricebar">
+        <div class="seg" role="group" aria-label="Zeitraum" id="rangeSeg"></div>
+        <div class="pstats" id="pstats"></div>
+      </div>
+      <div class="bigchart"><canvas id="priceChart" role="img" aria-label="Goldpreis im gewählten Zeitraum"></canvas></div>
+      <p class="note" id="pnote"></p>
+    </div>
+  </section>
+
   <h2>Die vier Werkzeuge</h2>
-  <p class="lede">Jedes Werkzeug gibt zwischen −2 (teuer) und +2 (günstig) Punkte. Ab +2 in Summe heißt es Kaufen, ab −2 Verkaufen.</p>
+  <p class="lede">Jedes Werkzeug gibt zwischen −2 (teuer) und +2 (günstig) Punkte. Ab +2 in Summe heißt es Kaufen, ab −2 Verkaufen. Die Bewertung läuft immer auf Basis des Dollar-Kurses; der Währungsschalter ändert nur die Anzeige.</p>
   <div class="tools" id="tools"></div>
+
+  <section id="newsSection" hidden>
+    <h2>Nachrichten mit Einfluss auf den Goldpreis</h2>
+    <p class="lede" id="newsLede"></p>
+    <div class="newsbox">
+      <div class="newshead"><div class="newslabel" id="newsLabel" data-tone="flat"></div></div>
+      <p class="sub" id="newsSummary" style="margin-top:6px"></p>
+      <ul class="chips" id="newsChips"></ul>
+      <div id="newsWarn"></div>
+      <ul class="newslist" id="newsList"></ul>
+      <details><summary>Quellen und Status</summary><ul id="newsSources"></ul></details>
+      <p class="note">Automatische Schlagwort-Auswertung der Überschriften nach festen Regeln, kein Ersatz für eigenes Urteil. Sie erkennt Themen und Richtung, versteht aber keinen Zusammenhang im Detail.</p>
+    </div>
+  </section>
 
   <h2>Verlauf des Signals</h2>
   <p class="lede">Ein Balken pro Handelstag, seit das Radar läuft.</p>
@@ -94,7 +177,8 @@ a{color:var(--gold)}
   </div>
 
   <footer>
-    <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre (DFII10) von FRED. Aktualisierung werktags nach US-Handelsschluss.</p>
+    <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre vom US-Finanzministerium (Fallback FRED). Euro-Preise = Dollar-Preis geteilt durch den EUR/USD-Kurs zum selben Zeitpunkt; vor Dezember 2003 gibt es keine Euro-Kurve. Nachrichten: finanzen.net (News und Analysen) sowie Ersatzquellen, falls finanzen.net Abrufe sperrt.</p>
+    <p>Aktualisierung werktags nach US-Handelsschluss. „Heute“ zeigt daher die zuletzt abgeschlossene Handelssitzung.</p>
     <p>Keine Anlageberatung. Die Signale sind eine regelbasierte Einordnung, keine Prognose.</p>
   </footer>
 </main>
@@ -105,6 +189,11 @@ const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).
 const tone = s => s > 0 ? "buy" : s < 0 ? "sell" : "hold";
 const vtone = v => v.includes("KAUFEN") && !v.includes("VER") ? "buy" : v.includes("VERKAUFEN") ? "sell" : "hold";
 const fmt = (n, d = 2) => n.toLocaleString("de-DE", {minimumFractionDigits: d, maximumFractionDigits: d});
+const signed = (n, d = 1) => (n > 0 ? "+" : n < 0 ? "−" : "") + fmt(Math.abs(n), d);
+const store = {
+  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* egal */ } }
+};
 const SUB = {
   "STARK KAUFEN": "Mehrere Werkzeuge zeigen gleichzeitig: Gold liegt unter seinem fairen Bereich.",
   "KAUFEN": "Gold ist eher günstig. Ein guter Zeitpunkt, schrittweise nachzukaufen.",
@@ -112,13 +201,21 @@ const SUB = {
   "VERKAUFEN": "Gold ist eher teuer. Teilgewinne sichern oder mit Käufen warten.",
   "STARK VERKAUFEN": "Mehrere Werkzeuge zeigen Überhitzung. Rücksetzer zum fairen Wert sind wahrscheinlich."
 };
+const RANGES = [["day", "Heute"], ["week", "Woche"], ["month", "Monat"], ["year", "Jahr"], ["10y", "10 Jahre"], ["max", "Max"]];
+const TZ = "Europe/Berlin";
+const GRAIN = {"5m": "5-Minuten-Werte", "15m": "15-Minuten-Werte", "60m": "Stundenwerte", "1d": "Tagesschlusskurse", "1wk": "Wochenwerte", "1mo": "Monatswerte"};
+
+const state = {cur: store.get("gr-cur") === "usd" ? "usd" : "eur", range: store.get("gr-range") || "month"};
+let D = null, priceChart = null, toolCharts = [];
+const sym = () => state.cur === "eur" ? "€" : "$";
+const money = (n, d = 0) => `${fmt(n, d)} ${sym()}`;
 
 Chart.defaults.color = css("--muted");
 Chart.defaults.font.family = css("--sans");
 Chart.defaults.borderColor = css("--line");
 
 function mini(el, labels, sets, yOpts = {}) {
-  new Chart(el, {
+  toolCharts.push(new Chart(el, {
     type: "line",
     data: {labels, datasets: sets.map(s => ({pointRadius: 0, borderWidth: 1.6, tension: .15, ...s}))},
     options: {
@@ -128,41 +225,105 @@ function mini(el, labels, sets, yOpts = {}) {
       scales: {x: {ticks: {maxTicksLimit: 4, maxRotation: 0}, grid: {display: false}},
                y: {ticks: {maxTicksLimit: 4}, ...yOpts}}
     }
+  }));
+}
+
+/* ---------- Kopf, Preise ---------- */
+function renderHero() {
+  const p = D.prices;
+  const eur = state.cur === "eur";
+  const chg = D.change ? D.change[state.cur] : null;
+  const chgHtml = chg == null ? "" :
+    `<span class="chg ${chg >= 0 ? "up" : "down"}">${chg >= 0 ? "▲" : "▼"} ${signed(chg, 2)} % zum Vortag</span>`;
+  document.getElementById("prices").innerHTML =
+    `<div>${money(eur ? p.eur_oz : p.usd_oz)}${chgHtml}<small>pro Unze</small></div>
+     <div>${money(eur ? p.eur_g : p.usd_g, 2)}<small>pro Gramm</small></div>
+     <div>${fmt(p.try_g, 0)} ₺<small>Gramm-Gold</small></div>`;
+  const band = (eur ? D.fair_band_eur : D.fair_band_usd);
+  document.getElementById("band").innerHTML = band
+    ? `Fairer Bereich pro Unze (zwischen 200- und 50-Tage-Schnitt): <b>${money(Math.min(...band))} – ${money(Math.max(...band))}</b>`
+    : "";
+}
+
+/* ---------- Preisgrafik ---------- */
+function labelFor(key, t) {
+  const o = {timeZone: TZ};
+  const f = {
+    day: {hour: "2-digit", minute: "2-digit"},
+    week: {weekday: "short", hour: "2-digit", minute: "2-digit"},
+    month: {day: "2-digit", month: "2-digit"},
+    year: {day: "numeric", month: "short"},
+    "10y": {month: "short", year: "numeric"},
+    max: {year: "numeric"}
+  }[key];
+  return new Date(t * 1000).toLocaleString("de-DE", {...o, ...f});
+}
+function fullLabel(key, t) {
+  const intraday = key === "day" || key === "week" || key === "month";
+  return new Date(t * 1000).toLocaleString("de-DE", intraday
+    ? {timeZone: TZ, weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"}
+    : {timeZone: TZ, day: "2-digit", month: "long", year: "numeric"});
+}
+
+function renderRangeButtons() {
+  const seg = document.getElementById("rangeSeg");
+  seg.innerHTML = "";
+  RANGES.filter(([k]) => D.charts && D.charts[k]).forEach(([k, label]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.dataset.range = k;
+    b.setAttribute("aria-pressed", String(k === state.range));
+    seg.appendChild(b);
   });
 }
 
-function render(d) {
-  document.getElementById("stamp").textContent =
-    "Stand " + new Date(d.as_of).toLocaleDateString("de-DE", {day: "numeric", month: "long", year: "numeric"});
-  const v = document.getElementById("verdict");
-  v.textContent = d.verdict.charAt(0) + d.verdict.slice(1).toLowerCase();
-  v.dataset.tone = vtone(d.verdict);
-  document.getElementById("sub").textContent = `Score ${d.score > 0 ? "+" : ""}${d.score} von ±8. ` + SUB[d.verdict];
+function renderPrice() {
+  const sec = document.getElementById("priceSection");
+  const avail = RANGES.map(r => r[0]).filter(k => D.charts && D.charts[k]);
+  if (!avail.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+  if (!avail.includes(state.range)) state.range = avail.includes("month") ? "month" : avail[0];
+  document.querySelectorAll("#rangeSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.range === state.range)));
 
-  const p = d.prices;
-  document.getElementById("prices").innerHTML =
-    `<div>${fmt(p.eur_g)} €<small>pro Gramm</small></div>
-     <div>${fmt(p.usd_oz, 0)} $<small>pro Unze</small></div>
-     <div>${fmt(p.try_g, 0)} ₺<small>Gramm-Gold</small></div>`;
+  const c = D.charts[state.range], vals = c[state.cur];
+  const idx = c.t.map((_, i) => i).filter(i => vals[i] != null);   // Euro-Kurve beginnt erst 2003
+  const t = idx.map(i => c.t[i]), y = idx.map(i => vals[i]);
+  const first = y[0], last = y[y.length - 1], hi = Math.max(...y), lo = Math.min(...y);
+  const vsPrev = state.range === "day" && D.change;   // "Heute": Änderung zum Schlusskurs des Vortags wie oben im Kopf
+  const ch = vsPrev ? D.change[state.cur] : (last / first - 1) * 100;
+  document.getElementById("pstats").innerHTML =
+    `<span>${vsPrev ? "Zum Vortag" : "Änderung"}<b class="${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "▲" : "▼"} ${signed(ch, 2)} %</b></span>
+     <span>Hoch<b>${money(hi)}</b></span><span>Tief<b>${money(lo)}</b></span><span>Zuletzt<b>${money(last)}</b></span>`;
+  document.getElementById("pnote").textContent =
+    `Preis pro Feinunze (31,1 g), Gold-Future, ${GRAIN[c.interval] || "Werte"}. Zeiten in deutscher Zeit. Stand der Daten: ${fullLabel("day", t[t.length - 1])}.` +
+    (state.range === "max" && state.cur === "eur" ? " Die Euro-Kurve beginnt im Dezember 2003, davor gibt es keinen EUR/USD-Kurs." : "");
 
-  const pct = s => ((8 - s) / 16) * 100;  // links teuer (−8), rechts günstig (+8)
-  const track = document.getElementById("track");
-  requestAnimationFrame(() => document.getElementById("pin").style.left = (100 - pct(d.score)) + "%");
-  const short = {ma: "Ø", rate: "Zins", gsr: "G/S", rsi: "RSI"};
-  track.querySelectorAll(".contrib").forEach(n => n.remove());
-  d.indicators.forEach((ind, i) => {
-    if (!ind.score) return;
-    const t = document.createElement("span");
-    t.className = "contrib";
-    t.style.left = (100 - pct(ind.score * 2)) + "%";
-    t.textContent = `${short[ind.key]} ${ind.score > 0 ? "+" : ""}${ind.score}`;
-    track.appendChild(t);
+  const labels = t.map(x => labelFor(state.range, x));
+  if (priceChart) priceChart.destroy();
+  priceChart = new Chart(document.getElementById("priceChart"), {
+    type: "line",
+    data: {labels, datasets: [{data: y, borderColor: css("--gold"), backgroundColor: "rgba(200,162,74,.10)", fill: true,
+      borderWidth: 1.8, pointRadius: 0, pointHoverRadius: 4, tension: .1}]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {legend: {display: false}, tooltip: {callbacks: {
+        title: it => fullLabel(state.range, t[it[0].dataIndex]),
+        label: it => money(it.parsed.y, 2) + " pro Unze"}}},
+      scales: {
+        x: {ticks: {maxTicksLimit: 6, maxRotation: 0, autoSkip: true}, grid: {display: false}},
+        y: {grace: "4%", ticks: {maxTicksLimit: 6, callback: v => fmt(v, 0)}}
+      }
+    }
   });
+}
 
-  const S = d.series, L = S.dates;
+/* ---------- Werkzeuge ---------- */
+function renderTools() {
+  toolCharts.forEach(c => c.destroy()); toolCharts = [];
+  const S = D.series, L = S.dates, eur = state.cur === "eur";
   const wrap = document.getElementById("tools");
   wrap.innerHTML = "";
-  d.indicators.forEach(ind => {
+  D.indicators.forEach(ind => {
     const el = document.createElement("article");
     el.className = "tool"; el.dataset.tone = tone(ind.score);
     el.innerHTML = `<h3>${ind.name}</h3>
@@ -174,9 +335,9 @@ function render(d) {
     const c = el.querySelector("canvas");
     const flat = (val) => L.map(() => val);
     if (ind.key === "ma") mini(c, L, [
-      {label: "Gold $/oz", data: S.gold, borderColor: css("--gold")},
-      {label: "50 Tage", data: S.sma50, borderColor: css("--silver"), borderDash: [4, 3], borderWidth: 1.2},
-      {label: "200 Tage", data: S.sma200, borderColor: css("--muted"), borderWidth: 1.2}]);
+      {label: `Gold ${sym()}/oz`, data: eur ? S.gold_eur : S.gold, borderColor: css("--gold")},
+      {label: "50 Tage", data: eur ? S.sma50_eur : S.sma50, borderColor: css("--silver"), borderDash: [4, 3], borderWidth: 1.2},
+      {label: "200 Tage", data: eur ? S.sma200_eur : S.sma200, borderColor: css("--muted"), borderWidth: 1.2}]);
     if (ind.key === "rate") mini(c, L, [
       {label: "Realzins %", data: S.real, borderColor: css("--silver")}]);
     if (ind.key === "gsr") mini(c, L, [
@@ -188,6 +349,104 @@ function render(d) {
       {label: "30", data: flat(30).slice(-120), borderColor: css("--buy"), borderDash: [3, 3], borderWidth: 1, hideTip: true},
       {label: "RSI", data: S.rsi.slice(-120), borderColor: css("--gold")}], {min: 0, max: 100});
   });
+}
+
+/* ---------- Nachrichten ---------- */
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const rtf = new Intl.RelativeTimeFormat("de", {numeric: "auto"});
+function ago(iso) {
+  if (!iso) return "";
+  const m = Math.round((new Date(iso) - Date.now()) / 60000);
+  return Math.abs(m) < 60 ? rtf.format(m, "minute") : Math.abs(m) < 1440 ? rtf.format(Math.round(m / 60), "hour") : rtf.format(Math.round(m / 1440), "day");
+}
+function renderNews() {
+  const N = D.news, sec = document.getElementById("newsSection");
+  if (!N) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const st = N.stats || {};
+  document.getElementById("newsLede").textContent =
+    `Ausgewertet wurden ${st.considered ?? "–"} Meldungen der letzten 48 Stunden, ${st.relevant ?? 0} davon haben einen erkennbaren Bezug zu Gold. ▲ stützt den Goldpreis, ▼ belastet ihn.`;
+  const lab = document.getElementById("newsLabel");
+  lab.dataset.tone = N.tone; lab.textContent = "";
+  lab.append(N.label, el("small", null, "für den Goldpreis"));
+  document.getElementById("newsSummary").textContent = N.summary;
+
+  const chips = document.getElementById("newsChips");
+  chips.innerHTML = "";
+  (N.themes || []).filter(t => t.dir !== 0).forEach(t => {
+    const li = el("li", "chip " + (t.dir > 0 ? "up" : "down"), `${t.dir > 0 ? "▲" : "▼"} ${t.topic} ×${t.count}`);
+    li.title = t.why;
+    chips.appendChild(li);
+  });
+
+  const warn = document.getElementById("newsWarn");
+  warn.innerHTML = "";
+  const srcs = N.sources || [];
+  const fn = srcs.filter(s => s.name.startsWith("finanzen.net") && !s.ok);
+  const msgs = [];
+  if (N.stale) msgs.push(`Alle Nachrichtenquellen waren beim letzten Lauf nicht erreichbar. Angezeigt wird der Stand vom ${new Date(N.updated).toLocaleDateString("de-DE")}.`);
+  if (fn.length) msgs.push(`finanzen.net ist beim automatischen Abruf nicht erreichbar (${fn.map(s => `${s.name}: ${s.error}`).join("; ")}). Es werden Ersatzquellen genutzt.`);
+  msgs.forEach(m => warn.appendChild(el("p", "warn", m)));
+
+  const list = document.getElementById("newsList");
+  list.innerHTML = "";
+  if (!N.items.length) list.appendChild(el("li", null, "Keine relevanten Meldungen gefunden."));
+  N.items.forEach(i => {
+    const li = el("li");
+    let cls = "", txt = "Info";
+    if (i.scored && i.impact > 0) { cls = "up"; txt = i.impact > 1 ? "▲ Starker Rückenwind" : "▲ Rückenwind"; }
+    else if (i.scored && i.impact < 0) { cls = "down"; txt = i.impact < -1 ? "▼ Starker Gegenwind" : "▼ Gegenwind"; }
+    else if (i.scored) txt = "● Beobachten";
+    li.appendChild(el("span", "badge " + cls, txt));
+    const body = el("div");
+    let head;
+    if (/^https?:\/\//.test(i.link)) { head = el("a", null, i.title); head.href = i.link; head.target = "_blank"; head.rel = "noopener noreferrer"; }
+    else head = el("span", null, i.title);
+    body.appendChild(head);
+    body.appendChild(el("div", "meta", [i.group === "analysen" ? "Analyse" : "News", i.source, ago(i.published), i.topics.join(", ")].filter(Boolean).join(" · ")));
+    body.appendChild(el("p", "why", i.why));
+    li.appendChild(body);
+    list.appendChild(li);
+  });
+
+  const ul = document.getElementById("newsSources");
+  ul.innerHTML = "";
+  srcs.forEach(s => {
+    const li = el("li");
+    li.append(`${s.name}: `, el("span", s.ok ? "st-ok" : "st-err", s.ok ? `${s.count} Meldungen` : s.error));
+    ul.appendChild(li);
+  });
+}
+
+/* ---------- Gesamt ---------- */
+function render(d) {
+  D = d;
+  document.getElementById("stamp").textContent =
+    "Stand " + new Date(d.as_of).toLocaleDateString("de-DE", {day: "numeric", month: "long", year: "numeric"});
+  const v = document.getElementById("verdict");
+  v.textContent = d.verdict.charAt(0) + d.verdict.slice(1).toLowerCase();
+  v.dataset.tone = vtone(d.verdict);
+  document.getElementById("sub").textContent = `Score ${d.score > 0 ? "+" : ""}${d.score} von ±8. ` + SUB[d.verdict];
+
+  const pct = s => ((8 - s) / 16) * 100;  // links teuer (−8), rechts günstig (+8)
+  const track = document.getElementById("track");
+  requestAnimationFrame(() => document.getElementById("pin").style.left = (100 - pct(d.score)) + "%");
+  const short = {ma: "Ø", rate: "Zins", gsr: "G/S", rsi: "RSI"};
+  track.querySelectorAll(".contrib").forEach(n => n.remove());
+  d.indicators.forEach(ind => {
+    if (!ind.score) return;
+    const t = document.createElement("span");
+    t.className = "contrib";
+    t.style.left = (100 - pct(ind.score * 2)) + "%";
+    t.textContent = `${short[ind.key]} ${ind.score > 0 ? "+" : ""}${ind.score}`;
+    track.appendChild(t);
+  });
+
+  renderHero();
+  renderRangeButtons();
+  renderPrice();
+  renderTools();
+  renderNews();
 
   const strip = document.getElementById("strip");
   strip.innerHTML = "";
@@ -199,10 +458,27 @@ function render(d) {
   });
 }
 
+function syncCurButtons() {
+  document.querySelectorAll("#curSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.cur === state.cur)));
+}
+document.getElementById("curSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.dataset.cur === state.cur) return;
+  state.cur = b.dataset.cur; store.set("gr-cur", state.cur);
+  syncCurButtons();
+  if (D) { renderHero(); renderPrice(); renderTools(); }
+});
+document.getElementById("rangeSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.range = b.dataset.range; store.set("gr-range", state.range);
+  renderPrice();
+});
+syncCurButtons();
+
 fetch("data.json", {cache: "no-store"})
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(render)
-  .catch(() => {
+  .catch(err => {
+    console.error(err);
     document.getElementById("stamp").textContent = "";
     document.querySelector(".hero").innerHTML =
       `<div class="error"><b>Noch keine Daten.</b><p>Starte in GitHub unter Actions → „Gold-Radar Update“ → „Run workflow“ den ersten Lauf. Danach erscheint hier das Signal.</p></div>`;

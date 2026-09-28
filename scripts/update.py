@@ -7,8 +7,9 @@ Setzt die 4 Werkzeuge aus dem Video um:
   3. Gold/Silber-Ratio (historisch gesund: 55–70)
   4. RSI 14 (>70 überhitzt, <30 Angst)
 
-Schreibt docs/data.json für das Dashboard und verschickt bei Signalwechsel
-eine Push-Nachricht (ntfy und/oder Telegram).
+Dazu: Goldpreis-Verläufe (Heute … Max, USD und EUR) und eine Nachrichten-Analyse
+(scripts/news.py). Schreibt docs/data.json für das Dashboard und verschickt bei
+Signalwechsel eine Push-Nachricht (ntfy und/oder Telegram).
 """
 from __future__ import annotations
 
@@ -16,12 +17,15 @@ import io
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import requests
+
+import news
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "data.json"
@@ -38,6 +42,16 @@ CFG = {
     "verdict": {"strong": 4, "normal": 2},
 }
 
+# Zeiträume der Preisgrafik: Schlüssel, Yahoo-Range, Intervall, max. Zeitabstand bei der EUR/USD-Zuordnung
+RANGES = [
+    ("day", "1d", "5m", "30min"),
+    ("week", "5d", "15m", "1h"),
+    ("month", "1mo", "60m", "3h"),
+    ("year", "1y", "1d", "2D"),
+    ("10y", "10y", "1wk", "4D"),
+    ("max", "max", "1mo", "16D"),
+]
+
 
 # ---------- Datenquellen ----------
 def yahoo(symbol: str, years: int = 5) -> pd.Series:
@@ -49,6 +63,24 @@ def yahoo(symbol: str, years: int = 5) -> pd.Series:
     idx = pd.to_datetime(res["timestamp"], unit="s").normalize()
     s = pd.Series(res["indicators"]["quote"][0]["close"], index=idx, dtype="float64")
     return s[~s.index.duplicated(keep="last")].dropna()
+
+
+def yahoo_range(symbol: str, rng: str, interval: str) -> pd.Series:
+    """Kurse für einen Chart-Zeitraum (auch Intraday), Index in UTC. Bis zu 3 Versuche."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    last_err: Exception | None = None
+    for attempt in range(3):
+        try:
+            r = requests.get(url, params={"range": rng, "interval": interval}, headers=UA, timeout=30)
+            r.raise_for_status()
+            res = r.json()["chart"]["result"][0]
+            idx = pd.to_datetime(res["timestamp"], unit="s", utc=True)
+            s = pd.Series(res["indicators"]["quote"][0]["close"], index=idx, dtype="float64").dropna()
+            return s[~s.index.duplicated(keep="last")].sort_index()
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"{symbol} {rng}/{interval}: {last_err}")
 
 
 def stooq(symbol: str) -> pd.Series:
@@ -134,10 +166,40 @@ def band(v: float, hi2: float, hi1: float, lo1: float, lo2: float) -> int:
     return 0
 
 
-def analyse(gold: pd.Series, silver: pd.Series, real: pd.Series) -> dict:
+def build_chart(rng: str, interval: str, tol: str) -> dict:
+    """Goldpreis eines Zeitraums in USD und EUR (EUR = USD-Kurs / EUR-USD-Kurs zur selben Zeit)."""
+    gold = yahoo_range("GC=F", rng, interval)
+    fx = yahoo_range("EURUSD=X", rng, interval)
+    eur = gold / fx.reindex(gold.index, method="nearest", tolerance=pd.Timedelta(tol))  # vor 2003 (max) ohne Kurs
+    return {
+        "interval": interval,
+        "t": [int(ts.timestamp()) for ts in gold.index],
+        "usd": [round(float(x), 2) for x in gold],
+        "eur": [None if pd.isna(x) else round(float(x), 2) for x in eur],
+    }
+
+
+def build_charts(prev: dict) -> dict:
+    """Alle Zeiträume; schlägt einer fehl, bleibt der Stand des letzten Laufs erhalten."""
+    charts = {}
+    for key, rng, interval, tol in RANGES:
+        try:
+            charts[key] = build_chart(rng, interval, tol)
+            print(f"  Chart {key}: {len(charts[key]['t'])} Punkte")
+        except Exception as e:  # noqa: BLE001
+            print(f"  Chart {key} fehlgeschlagen: {e}")
+            if key in prev.get("charts", {}):
+                charts[key] = prev["charts"][key]
+    return charts
+
+
+def analyse(gold: pd.Series, silver: pd.Series, real: pd.Series, eurusd: pd.Series) -> dict:
     df = pd.DataFrame({"gold": gold, "silver": silver}).dropna()
+    df["eur"] = df.gold / eurusd.reindex(df.index, method="ffill")
     df["sma50"] = df.gold.rolling(50).mean()
     df["sma200"] = df.gold.rolling(200).mean()
+    df["sma50_eur"] = df.eur.rolling(50).mean()
+    df["sma200_eur"] = df.eur.rolling(200).mean()
     df["rsi"] = rsi(df.gold)
     df["gsr"] = df.gold / df.silver
     df["real"] = real.reindex(df.index, method="ffill")
@@ -203,15 +265,21 @@ def analyse(gold: pd.Series, silver: pd.Series, real: pd.Series) -> dict:
     tail = df.iloc[-400:]
     series = {
         "dates": [d.strftime("%Y-%m-%d") for d in tail.index],
-        **{k: [None if pd.isna(x) else round(float(x), 2) for x in tail[k]]
-           for k in ("gold", "sma50", "sma200", "rsi", "gsr", "real")},
+        **{out: [None if pd.isna(x) else round(float(x), 2) for x in tail[col]]
+           for out, col in (("gold", "gold"), ("sma50", "sma50"), ("sma200", "sma200"),
+                            ("gold_eur", "eur"), ("sma50_eur", "sma50_eur"), ("sma200_eur", "sma200_eur"),
+                            ("rsi", "rsi"), ("gsr", "gsr"), ("real", "real"))},
     }
+    prev_row = df.iloc[-2]
     return {
         "verdict": verdict, "score": int(score),
         "indicators": indicators, "series": series,
         "as_of": df.index[-1].strftime("%Y-%m-%d"),
         "gold_usd_oz": round(float(last.gold), 2),
         "fair_band_usd": [round(float(last.sma200), 0), round(float(last.sma50), 0)],
+        "fair_band_eur": [round(float(last.sma200_eur), 0), round(float(last.sma50_eur), 0)],
+        "change": {"usd": round(float(df.gold.iloc[-1] / prev_row.gold - 1) * 100, 2),
+                   "eur": round(float(df.eur.iloc[-1] / prev_row.eur - 1) * 100, 2)},
     }
 
 
@@ -270,18 +338,34 @@ def main() -> int:
     usdtry = price("TRY=X", "usdtry")
     real = real_yield()
 
-    res = analyse(gold, silver, real)
+    prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
+
+    res = analyse(gold, silver, real, eurusd)
     g = res["gold_usd_oz"]
     eur, tl = float(eurusd.iloc[-1]), float(usdtry.iloc[-1])
     res["prices"] = {
         "usd_oz": g,
+        "usd_g": round(g / GRAM_PER_OZ, 2),
         "eur_oz": round(g / eur, 2),
         "eur_g": round(g / eur / GRAM_PER_OZ, 2),
         "try_g": round(g * tl / GRAM_PER_OZ, 2),
+        "eurusd": round(eur, 4),
     }
     res["updated"] = datetime.now(timezone.utc).isoformat(timespec="minutes")
 
-    prev = json.loads(OUT.read_text()) if OUT.exists() else {}
+    print("Lade Preisverläufe …")
+    res["charts"] = build_charts(prev)
+
+    print("Lade Nachrichten …")
+    try:
+        res["news"] = news.collect()
+        if res["news"]["stats"]["fetched"] == 0 and prev.get("news"):  # alle Quellen down: letzten Stand behalten
+            res["news"] = {**prev["news"], "sources": res["news"]["sources"], "stale": True}
+    except Exception as e:  # noqa: BLE001
+        print(f"  News-Analyse fehlgeschlagen: {e}")
+        if prev.get("news"):
+            res["news"] = {**prev["news"], "stale": True}
+
     history = prev.get("history", [])
     history = [h for h in history if h["date"] != res["as_of"]]
     history.append({"date": res["as_of"], "verdict": res["verdict"], "score": res["score"]})
@@ -292,15 +376,17 @@ def main() -> int:
     if changed or force:  # erster Lauf meldet sich auch (Test, dass Push funktioniert)
         lines = [f"{i['name']}: {i['value']}{(' ' + i['unit']) if i['unit'] else ''} ({i['score']:+d})"
                  for i in res["indicators"]]
+        nw = res.get("news")
+        news_line = f"\n\nNews: {nw['label']} – {nw['summary']}" if nw else ""
         body = (f"Gold {res['prices']['eur_g']:.2f} €/g · {g:,.0f} $/oz\n"
                 f"Score {res['score']:+d} (vorher: {prev.get('verdict', '–')})\n\n" + "\n".join(lines)
-                + "\n\nKeine Anlageberatung.")
+                + news_line + "\n\nKeine Anlageberatung.")
         tag = {"KAUFEN": "green_circle", "STARK KAUFEN": "green_circle",
                "VERKAUFEN": "red_circle", "STARK VERKAUFEN": "red_circle"}.get(res["verdict"], "yellow_circle")
         notify(f"Gold-Radar: {res['verdict']}", body, tag)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")))
+    OUT.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Fertig: {res['verdict']} (Score {res['score']:+d}), Stand {res['as_of']}")
     return 0
 

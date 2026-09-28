@@ -26,9 +26,24 @@ Schwellen anpassen: `CFG` oben in `scripts/update.py`.
 Danach läuft alles automatisch Mo–Fr um 21:30 UTC. Eine Nachricht kommt nur, wenn sich das Signal ändert.
 Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Actions → Variables* → `NOTIFY_DAILY` = `true`.
 
+## Preisgrafik
+Goldpreis (Future `GC=F`) für Heute, Woche, Monat, Jahr, 10 Jahre und Max, umschaltbar zwischen Euro und US-Dollar.
+Euro = Dollar-Kurs ÷ EUR/USD-Kurs zum selben Zeitpunkt (vor Dezember 2003 gibt es keinen Euro-Kurs). Die Signale rechnen immer in Dollar;
+der Währungsschalter ändert nur die Anzeige. Die Daten werden einmal pro Lauf erzeugt, „Heute“ zeigt daher die letzte Handelssitzung.
+
+## Nachrichten-Analyse
+`scripts/news.py` liest RSS-Feeds, sucht Meldungen mit möglichem Einfluss auf den Goldpreis und ordnet sie nach festen Regeln ein
+(Zinsen, Anleiherenditen, Dollar, Inflation, Geopolitik, Konjunktur, Marktstress, Staatsschulden, Goldnachfrage). Pro Meldung gibt es Richtung
+(Rückenwind/Gegenwind), Begründung und Thema; daraus entsteht eine Gesamteinschätzung. Sie fließt **nicht** in das Kauf-/Verkaufssignal ein.
+Regeln anpassen: `RULES` in `scripts/news.py`, Tests: `python -m unittest discover -s tests`.
+
+Quellen: `https://www.finanzen.net/rss/news` und `https://www.finanzen.net/rss/analysen` zuerst. finanzen.net sperrt Abrufe durch Skripte teilweise (HTTP 403).
+Dann greifen Ersatzquellen (Google News, tagesschau, Handelsblatt); der Status jeder Quelle steht im Dashboard unter „Quellen und Status“.
+
 ## Datenquellen (alle ohne API-Key)
 - Gold `GC=F`, Silber `SI=F`, `EURUSD=X`, `TRY=X` – Yahoo Finance (Fallback: Stooq)
-- US-Realzins 10 J (`DFII10`) – FRED, Federal Reserve Bank of St. Louis
+- US-Realzins 10 J – US-Finanzministerium (identisch zu FRED `DFII10`), Fallback FRED
+- Nachrichten – siehe oben
 
 ## Hinweis
 Keine Anlageberatung. Die Signale sind eine regelbasierte Einordnung, keine Prognose.
