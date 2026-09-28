@@ -23,7 +23,9 @@ Schwellen anpassen: `CFG` oben in `scripts/update.py`.
 3. **Dashboard veröffentlichen:** *Settings → Pages → Source: Deploy from a branch → Branch `main`, Ordner `/docs`*.
 4. **Erster Lauf:** *Actions → Gold-Radar Update → Run workflow*. Nach ca. 1 Minute kommt die erste Push-Nachricht, und das Dashboard ist unter `https://<dein-name>.github.io/<repo>/` erreichbar.
 
-Danach läuft alles automatisch **alle 15 Minuten** (GitHub startet geplante Läufe gelegentlich einige Minuten verspätet).
+Danach läuft alles automatisch **alle 15 Minuten**. GitHubs eigener Zeitplan ist unzuverlässig (Läufe kommen verspätet oder gar nicht),
+deshalb startet ein kleiner Cloudflare-Worker den Workflow auf die Minute genau (`worker/`, Einrichtung dort in der README).
+Der GitHub-Zeitplan läuft als Reserve mit und überspringt sich, wenn die Daten frisch sind.
 Eine Push-Nachricht kommt nur im Tagesabschluss-Lauf (22 Uhr UTC), und nur wenn sich das Signal seit der letzten Meldung geändert hat.
 Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Actions → Variables* → `NOTIFY_DAILY` = `true`.
 

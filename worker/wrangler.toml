@@ -1,0 +1,9 @@
+name = "gold-radar-wecker"
+main = "index.js"
+compatibility_date = "2026-09-01"
+workers_dev = false          # keine öffentliche workers.dev-Adresse, der Worker braucht keine
+
+[triggers]
+crons = ["*/15 * * * *"]     # alle 15 Minuten (UTC)
+
+# Secret GITHUB_TOKEN wird NICHT hier eingetragen, sondern mit:  npx wrangler secret put GITHUB_TOKEN

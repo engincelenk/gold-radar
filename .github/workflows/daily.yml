@@ -1,10 +1,18 @@
 name: Gold-Radar Update
 
+# Auslöser:
+#  1. Cloudflare-Worker "gold-radar-wecker" (siehe worker/): startet alle 15 Minuten auf die Minute genau per workflow_dispatch (source=cloudflare)
+#  2. Reserve-Zeitplan von GitHub (Best Effort, oft verspätet). Läuft nur, wenn der Stand älter als 10 Minuten ist
+#  3. Manuell ("Run workflow") und nach Code-Änderungen (Push)
 on:
   schedule:
-    - cron: "*/15 * * * *"    # alle 15 Minuten (GitHub startet geplante Läufe gelegentlich mit einigen Minuten Verspätung)
-  workflow_dispatch: {}        # manuell startbar ("Run workflow")
-  push:                        # nach Code-Änderungen sofort neu rechnen
+    - cron: "7,22,37,52 * * * *"   # versetzt zu :00/:15/:30/:45, wo GitHub am stärksten ausgelastet ist
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Auslöser: manual oder cloudflare (der Wecker setzt cloudflare)"
+        default: manual
+  push:
     branches: [main]
     paths: ["scripts/**", "requirements.txt", ".github/workflows/daily.yml"]
 
@@ -19,6 +27,9 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      # "true" bei automatischen Läufen (Wecker oder Zeitplan): Push-Nachricht und Tages-Snapshot nur um 22 Uhr UTC
+      AUTO: ${{ github.event_name == 'schedule' || github.event.inputs.source == 'cloudflare' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,7 +52,25 @@ jobs:
             echo "Noch kein data-Branch, nutze docs/data.json aus main"
           fi
 
+      - name: Reservelauf überspringen, wenn der Stand frisch ist
+        id: fresh
+        if: github.event_name == 'schedule'
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          skip = False
+          try:
+              age = datetime.now(timezone.utc) - datetime.fromisoformat(json.load(open("docs/data.json", encoding="utf-8"))["updated"])
+              skip = age.total_seconds() < 600
+              print(f"Stand ist {age.total_seconds() / 60:.0f} Min. alt -> " + ("überspringen" if skip else "aktualisieren"))
+          except Exception as e:
+              print(f"Alter nicht lesbar ({e}) -> aktualisieren")
+          open(os.environ["GITHUB_OUTPUT"], "a").write(f"skip={'true' if skip else 'false'}\n")
+          PY
+
       - name: Daten holen, Signal berechnen, Nachrichten auswerten, ggf. benachrichtigen
+        if: steps.fresh.outputs.skip != 'true'
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -49,10 +78,11 @@ jobs:
           NOTIFY_DAILY: ${{ vars.NOTIFY_DAILY }}
         run: |
           # Push-Nachrichten nur im Tagesabschluss-Lauf (22 Uhr UTC) und bei manuellem/Code-Start
-          if [ "${{ github.event_name }}" != "schedule" ] || [ "$(date -u +%H)" = "22" ]; then NOTIFY="--notify"; fi
+          if [ "$AUTO" != "true" ] || [ "$(date -u +%H)" = "22" ]; then NOTIFY="--notify"; fi
           python scripts/update.py $NOTIFY
 
       - name: Aktuellen Stand im Branch "data" veröffentlichen
+        if: steps.fresh.outputs.skip != 'true'
         run: |
           git config user.name "gold-radar-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -63,9 +93,10 @@ jobs:
 
       # Einmal pro Tag (22 Uhr UTC) ein Snapshot in main: Rückfall für die Seite, falls der data-Branch nicht erreichbar ist.
       - name: Tages-Snapshot in main committen
+        if: steps.fresh.outputs.skip != 'true'
         run: |
           last=$(git log -1 --format=%ct -- docs/data.json)
-          if [ "${{ github.event_name }}" != "schedule" ] || { [ "$(date -u +%H)" = "22" ] && [ $(( $(date +%s) - last )) -gt 10800 ]; }; then
+          if [ "$AUTO" != "true" ] || { [ "$(date -u +%H)" = "22" ] && [ $(( $(date +%s) - last )) -gt 10800 ]; }; then
             git add docs/data.json
             git diff --staged --quiet || git commit -m "Update $(date -u +%F)"
             git pull --rebase
