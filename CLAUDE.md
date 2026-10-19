@@ -1,7 +1,7 @@
 # Gold-Radar
 
 Statisches Dashboard (GitHub Pages, `docs/`) mit täglichem Update per GitHub Actions.
-Repo: https://github.com/engincelenk/gold-radar · Live: https://www.gr.immofuchs.info · Branch: `main`
+Repo: https://github.com/engincelenk/gold-radar · Live: https://gr.immofuchs.info (die Domain ohne `www` ist in den Pages-Einstellungen hinterlegt, `docs/CNAME` nicht von Hand ändern; `www.gr…` leitet weiter) · Branch: `main`
 
 ## Deploy (auf Zuruf: „deploy“, „bring das live“, „push das“)
 
