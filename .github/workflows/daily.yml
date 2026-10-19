@@ -48,6 +48,8 @@ jobs:
         run: |
           if git fetch origin data && git show FETCH_HEAD:data.json > /tmp/prev.json; then
             mv /tmp/prev.json docs/data.json
+            # Rückblick (backtest.json) wird nur einmal täglich neu gerechnet und muss zwischen den Läufen erhalten bleiben
+            if git show FETCH_HEAD:backtest.json > /tmp/prev_bt.json 2>/dev/null; then mv /tmp/prev_bt.json docs/backtest.json; fi
           else
             echo "Noch kein data-Branch, nutze docs/data.json aus main"
           fi
@@ -87,8 +89,11 @@ jobs:
         run: |
           git config user.name "gold-radar-bot"
           git config user.email "actions@users.noreply.github.com"
-          blob=$(git hash-object -w docs/data.json)
-          tree=$(printf '100644 blob %s\tdata.json\n' "$blob" | git mktree)
+          entries=$(printf '100644 blob %s\tdata.json\n' "$(git hash-object -w docs/data.json)")
+          if [ -f docs/backtest.json ]; then
+            entries=$(printf '%s\n100644 blob %s\tbacktest.json\n' "$entries" "$(git hash-object -w docs/backtest.json)")
+          fi
+          tree=$(printf '%s\n' "$entries" | git mktree)
           commit=$(git commit-tree "$tree" -m "Daten $(date -u +%FT%H:%MZ)")
           git push --force origin "$commit:refs/heads/data"
 
@@ -99,6 +104,7 @@ jobs:
           last=$(git log -1 --format=%ct -- docs/data.json)
           if [ "$AUTO" != "true" ] || { [ "$(date -u +%H)" = "22" ] && [ $(( $(date +%s) - last )) -gt 10800 ]; }; then
             git add docs/data.json
+            if [ -f docs/backtest.json ]; then git add docs/backtest.json; fi
             git diff --staged --quiet || git commit -m "Update $(date -u +%F)"
             git pull --rebase
             git push

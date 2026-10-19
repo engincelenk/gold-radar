@@ -25,11 +25,13 @@ import numpy as np
 import pandas as pd
 import requests
 
+import backtest
 import news
 import spot as spotmod
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "data.json"
+BT_OUT = ROOT / "docs" / "backtest.json"
 GRAM_PER_OZ = 31.1034768
 UA = {"User-Agent": "Mozilla/5.0 (gold-radar)"}
 
@@ -137,8 +139,8 @@ def treasury_real(years: int = 3) -> pd.Series:
     return s.dropna().sort_index()
 
 
-def real_yield() -> pd.Series:
-    for fn in (treasury_real, lambda: fred("DFII10")):
+def real_yield(years: int = 3) -> pd.Series:
+    for fn in (lambda: treasury_real(years), lambda: fred("DFII10")):
         try:
             s = fn()
             if len(s) > 200:
@@ -150,12 +152,8 @@ def real_yield() -> pd.Series:
 
 
 # ---------- Indikatoren ----------
-def rsi(close: pd.Series, n: int = 14) -> pd.Series:
-    d = close.diff()
-    gain = d.clip(lower=0).ewm(alpha=1 / n, adjust=False).mean()
-    loss = (-d.clip(upper=0)).ewm(alpha=1 / n, adjust=False).mean()
-    rs = gain / loss.replace(0, np.nan)
-    return 100 - 100 / (1 + rs)
+# rsi() liegt in backtest.py, damit Live-Signal und Rückrechnung dieselbe Formel nutzen
+rsi = backtest.rsi
 
 
 def band(v: float, hi2: float, hi1: float, lo1: float, lo2: float) -> int:
@@ -345,6 +343,27 @@ def notify(title: str, body: str, tags: str) -> None:
             print(f"  Telegram-Fehler: {e}")
 
 
+def refresh_backtest(force: bool = False) -> dict | None:
+    """Rückblick (scripts/backtest.py) einmal täglich neu rechnen. Bei Fehlern bleibt die letzte Datei erhalten."""
+    prev_bt = {}
+    if BT_OUT.exists():
+        try:
+            prev_bt = json.loads(BT_OUT.read_text(encoding="utf-8"))
+        except ValueError:
+            print("  backtest.json ist beschädigt und wird neu berechnet")
+    if not (force or backtest.is_due(prev_bt.get("generated"))):
+        return prev_bt or None
+    print("Rechne Rückblick auf 10 Jahre …")
+    try:
+        bt = backtest.build(yahoo("GC=F", 10), yahoo("SI=F", 10), real_yield(11), yahoo("EURUSD=X", 10), yahoo("TRY=X", 10), CFG)
+        BT_OUT.write_text(json.dumps(bt, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        print(f"  Rückblick {bt['start']} bis {bt['end']}, Zeiträume: {', '.join(bt['periods'])}")
+        return bt
+    except Exception as e:  # noqa: BLE001
+        print(f"  Rückblick fehlgeschlagen: {e}")
+        return prev_bt or None
+
+
 def main() -> int:
     prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     notify_ok = "--notify" in sys.argv  # Push-Nachrichten nur im Tagesabschluss-Lauf, sonst würde das Signal tagsüber flackern
@@ -396,6 +415,10 @@ def main() -> int:
         print(f"  News-Analyse fehlgeschlagen: {e}")
         if prev.get("news"):
             res["news"] = {**prev["news"], "stale": True}
+
+    bt = refresh_backtest(force="--backtest" in sys.argv)
+    if bt:  # nur ein Verweis; die Seite lädt docs/backtest.json und lädt sie neu, wenn sich "backtest_end" ändert
+        res["backtest_end"], res["backtest_generated"] = bt["end"], bt["generated"]
 
     history = prev.get("history", [])
     history = [h for h in history if h["date"] != res["as_of"]]

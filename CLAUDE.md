@@ -8,7 +8,7 @@ Repo: https://github.com/engincelenk/gold-radar · Live: https://www.gr.immofuch
 Immer über das Skript, nie von Hand mit git:
 
 ```
-python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Sonnet 5 <noreply@anthropic.com>"
+python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
 - Committet alle Änderungen, holt Bot-Commits per Rebase, pusht, wartet auf Workflow und Pages-Build und prüft die Live-Seite.
@@ -25,5 +25,6 @@ python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Son
 - Vor `git pull`/`push` von Hand bedenken: `main` bekommt Bot-Commits; `deploy.py` rebased automatisch.
 - Nachrichten-Regeln: `RULES` in `scripts/news.py`. Kauf-/Verkaufssignal: `CFG` in `scripts/update.py`.
 - Spotpreis (goldprice.dev) ist optional: `scripts/spot.py`, Secret `GOLDPRICE_API_KEY`. Budget 950 Anrufe/Monat, verteilt über `should_fetch()` (nicht fest verdrahtetes Intervall) – bei Änderungen daran immer `tests/test_spot.py` laufen lassen, insbesondere `test_never_exceeds_budget_even_with_frequent_calls`.
+- Rückblick „Lag das Signal richtig?“: `scripts/backtest.py` → `docs/backtest.json` (einmal täglich nach 23:30 UTC, liegt im Branch `data` neben `data.json`; `--backtest` erzwingt Neuberechnung). Die Signal-Logik dort muss mit `update.analyse()` übereinstimmen und darf nie Zukunftsdaten nutzen – bei jeder Änderung an `CFG` oder den Indikatoren `tests/test_backtest.py` laufen lassen. Die Seite soll das Ergebnis ehrlich zeigen, auch wenn es schlecht aussieht; Schwellen nie nachträglich an den Rückblick anpassen, ohne es dem Nutzer offen zu sagen.
 - Lokal testen: Daten mit `python scripts/update.py` erzeugen (Abhängigkeiten aus `requirements.txt`), dann `docs/` mit `python -m http.server` ansehen. Das schreibt `docs/data.json`; diese Änderung nicht mitcommitten, wenn sie nur lokaler Test ist.
 - Unter Windows kann der lokale DNS-Cache neue Domains verzögert kennen; `deploy.py` umgeht das bei der Live-Prüfung.

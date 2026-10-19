@@ -108,6 +108,44 @@ details ul{margin:6px 0 0;padding-left:18px}
 .legend{display:flex;gap:18px;color:var(--muted);font-size:.85rem;margin-top:8px;flex-wrap:wrap}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 
+/* Rückblick: Lag das Signal richtig? */
+.bt-controls{display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.bt-controls .lbl{color:var(--muted);font-size:.88rem}
+.btnow{border-left:3px solid var(--hold);padding:10px 14px;margin:0 0 16px;background:rgba(184,162,106,.08);max-width:80ch}
+.btbox{background:var(--panel);border-radius:8px;padding:18px 16px 12px}
+.btresult{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px 28px}
+.btstat small{display:block;color:var(--muted);font-size:.85rem}
+.btstat b{display:block;font-family:var(--cond);font-size:2.5rem;font-weight:600;line-height:1.1}
+.btstat b.up{color:var(--buy)} .btstat b.down{color:var(--sell)}
+.btstat span{display:block;color:var(--muted);font-size:.85rem}
+.btfazit{margin:14px 0 0;max-width:75ch}
+.btchart{position:relative;height:300px;margin-top:14px}
+@media (max-width:560px){.btchart{height:240px}}
+.btcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:18px}
+.btcard{background:var(--panel);border-left:3px solid var(--line);padding:14px 16px 10px;border-radius:2px 8px 8px 2px}
+.btcard.buy{border-left-color:var(--buy)} .btcard.sell{border-left-color:var(--sell)} .btcard.hold{border-left-color:var(--hold)}
+.btcard h3{margin:0;font-size:1.05rem;font-weight:600}
+.btcard .days{color:var(--muted);font-size:.82rem}
+.hitrow{margin-top:12px}
+.hitrow .q{font-size:.88rem;color:var(--muted)}
+.hitrow .v{font-family:var(--cond);font-size:1.8rem;font-weight:600;line-height:1.1}
+.hitrow .v small{font-family:var(--sans);font-size:.82rem;font-weight:400;color:var(--muted);margin-left:8px}
+.hitbar{position:relative;height:8px;background:var(--line);border-radius:4px;margin:6px 0 4px}
+.hitbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--gold)}
+.hitbar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text)}
+.hitrow .cmp{font-size:.8rem;color:var(--muted)}
+h3.bth{font-family:var(--cond);font-weight:600;font-size:1.3rem;margin:30px 0 4px}
+.btstrip{display:flex;gap:1px;height:48px;touch-action:pan-y}
+.btstrip .bd{flex:1 1 0;min-width:2px;display:flex;flex-direction:column;gap:3px}
+.btstrip .bd.on{outline:1px solid var(--text);outline-offset:1px}
+@media (max-width:700px){.btstrip{gap:0}.btstrip .bd{min-width:1px}}   /* 252 Balken müssen auch auf ein Handy passen */
+.bd .s{flex:1;border-radius:1px}
+.bd .m{height:9px;border-radius:1px}
+.m.ok{background:var(--text)} .m.no{background:#9a7fd0} .m.na{background:var(--line)}
+.btread{min-height:1.6em;color:var(--muted);font-size:.9rem;margin:8px 0 0}
+#btSection details ul{margin:8px 0 0;padding-left:20px;max-width:80ch}
+#btSection details li{margin:6px 0}
+
 footer{margin-top:48px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px}
 footer p{max-width:70ch}
 .error{background:var(--panel);padding:20px;border-left:3px solid var(--sell)}
@@ -179,6 +217,58 @@ a{color:var(--gold)}
     <span><i style="background:var(--sell)"></i>Verkaufen</span>
   </div>
 
+  <section id="btSection" hidden>
+    <h2>Lag das Signal richtig?</h2>
+    <p class="lede" id="btLede"></p>
+    <p class="btnow" id="btNow" hidden></p>
+    <div class="bt-controls">
+      <div class="seg" role="group" aria-label="Zeitraum des Rückblicks" id="btPeriodSeg"></div>
+    </div>
+    <div class="btbox">
+      <div class="btresult" id="btResult"></div>
+      <p class="btfazit" id="btFazit"></p>
+      <div class="btchart"><canvas id="btChart" role="img" aria-label="Wertentwicklung: dem Signal folgen gegenüber Gold durchgehend halten"></canvas></div>
+      <p class="note" id="btChartNote"></p>
+    </div>
+    <div class="btcards" id="btCards"></div>
+    <p class="note" id="btBase"></p>
+
+    <h3 class="bth">Die letzten 12 Monate Tag für Tag</h3>
+    <p class="lede" id="btStripLede"></p>
+    <div class="bt-controls">
+      <span class="lbl">Geprüft nach</span>
+      <div class="seg" role="group" aria-label="Prüfzeitraum" id="btHorizonSeg">
+        <button type="button" data-h="1m" aria-pressed="true">1 Monat</button>
+        <button type="button" data-h="3m" aria-pressed="false">3 Monaten</button>
+      </div>
+    </div>
+    <div class="btstrip" id="btStrip" role="img"></div>
+    <div class="legend">
+      <span><i style="background:var(--buy)"></i>Kaufen</span>
+      <span><i style="background:var(--hold)"></i>Halten</span>
+      <span><i style="background:var(--sell)"></i>Verkaufen</span>
+      <span>Darunter:</span>
+      <span><i style="background:var(--text)"></i>richtig</span>
+      <span><i style="background:#9a7fd0"></i>falsch</span>
+      <span><i style="background:var(--line)"></i>noch offen</span>
+    </div>
+    <p class="btread" id="btRead" aria-live="polite">Fahre über einen Tag oder tippe ihn an, um Details zu sehen.</p>
+
+    <details>
+      <summary>So ist das gerechnet – und was es nicht aussagt</summary>
+      <ul>
+        <li><b>Rückrechnung, keine echten Entscheidungen.</b> Dieselben vier Werkzeuge und Schwellen wie oben, für jeden Handelstag neu berechnet. Die Schwellen stammen aus der Vorlage des Radars und wurden nicht nachträglich auf diese Kurse angepasst.</li>
+        <li><b>Kein Blick in die Zukunft.</b> Jedes Signal nutzt nur Kurse bis zu seinem Tag (gleitende Durchschnitte, RSI und Zinsänderung rechnen rückwärts). Die späteren Kurse dienen nur der Bewertung. Das prüft ein automatischer Test.</li>
+        <li><b>„Richtig“ heißt:</b> Kaufen, wenn der Kurs nach dem Prüfzeitraum höher stand; Verkaufen, wenn er tiefer stand; Halten, wenn der Kurs ruhiger blieb als an einem typischen Tag (kleiner als die mediane Kursbewegung im Prüfzeitraum). Der Vergleichswert zeigt, wie oft ein beliebiger Tag richtig gelegen hätte.</li>
+        <li><b>„Dem Signal gefolgt“:</b> Start investiert. Kaufen oder Stark kaufen: investiert. Verkaufen oder Stark verkaufen: alles in Bargeld. Halten: Position behalten. Gewechselt wird zum Schlusskurs des Signaltags. Ohne Gebühren, Spreads, Steuern und ohne Zinsen auf Bargeld (bei der Lira mit ihren hohen Zinsen besonders unrealistisch). Das ist die strengste Lesart: Oben steht bei Verkaufen auch „Teilgewinne sichern“. Wer nur teilweise verkauft, landet zwischen den beiden Linien.</li>
+        <li><b>Wenige echte Beobachtungen.</b> Aufeinanderfolgende Tage mit demselben Signal gehören zu einer Phase und bewegen sich gemeinsam. Entscheidend ist deshalb die Zahl der Phasen, nicht der Tage.</li>
+        <li><b>Währungen:</b> Das Signal wird immer in Dollar berechnet. Euro und Lira ändern nur, in welcher Währung Kurse und Ergebnis gemessen werden.</li>
+        <li><b>Kursbasis:</b> Gold-Future GC=F (COMEX, Tagesschlusskurse, mit Kontraktwechseln), nicht der Spotpreis. Der Rückblick wird einmal täglich nach Handelsschluss neu gerechnet.</li>
+        <li><b>Keine Garantie.</b> Wie das Signal in der Vergangenheit lag, sagt nichts sicher über die Zukunft. Keine Anlageberatung.</li>
+      </ul>
+    </details>
+  </section>
+
   <footer>
     <p>Daten: Gold- und Silber-Futures, EUR/USD und USD/TRY von Yahoo Finance (Fallback Stooq), US-Realzins 10 Jahre vom US-Finanzministerium (Fallback FRED). Euro-Preise = Dollar-Preis geteilt durch den EUR/USD-Kurs, Lira-Preise = Dollar-Preis mal USD/TRY-Kurs, jeweils zum selben Zeitpunkt; vor Dezember 2003 gibt es keine Euro-Kurve, vor Februar 2005 keine Lira-Kurve. Nachrichten: finanzen.net (News und Analysen) sowie Ersatzquellen, falls finanzen.net Abrufe sperrt.</p>
     <p>Der Future GC=F (COMEX) weicht üblicherweise um 0,2–1 % vom Spotpreis ab, den z.&nbsp;B. finanzen.net oder die Deutsche Börse zeigen. Wo verfügbar, kommt der Spotpreis oben zusätzlich von <a href="https://goldprice.dev" rel="noopener">goldprice.dev</a>, budgetiert auf ca. alle 45 Minuten (kostenloser Plan); die Preisgrafik und die vier Werkzeuge unten rechnen weiter mit dem Future, weil er alle 15 Minuten verfügbar ist.</p>
@@ -210,8 +300,9 @@ const TZ = "Europe/Berlin";
 const GRAIN = {"5m": "5-Minuten-Werte", "15m": "15-Minuten-Werte", "60m": "Stundenwerte", "1d": "Tagesschlusskurse", "1wk": "Wochenwerte", "1mo": "Monatswerte"};
 
 const CUR = {eur: {sym: "€", sfx: "_eur"}, usd: {sym: "$", sfx: ""}, try: {sym: "₺", sfx: "_try"}};
-const state = {cur: CUR[store.get("gr-cur")] ? store.get("gr-cur") : "eur", range: store.get("gr-range") || "month"};
-let D = null, priceChart = null, toolCharts = [];
+const state = {cur: CUR[store.get("gr-cur")] ? store.get("gr-cur") : "eur", range: store.get("gr-range") || "month",
+  btP: store.get("gr-btp") || "max", btH: store.get("gr-bth") === "3m" ? "3m" : "1m"};
+let D = null, priceChart = null, toolCharts = [], BT = null, btChart = null;
 const sym = () => CUR[state.cur].sym;
 const money = (n, d = 0) => `${fmt(n, d)} ${sym()}`;
 
@@ -445,6 +536,221 @@ function renderNews() {
   });
 }
 
+/* ---------- Rückblick: Lag das Signal richtig? ---------- */
+const BT_SOURCES = [
+  () => `https://raw.githubusercontent.com/engincelenk/gold-radar/data/backtest.json?t=${Math.floor(Date.now() / 60000)}`,
+  () => `backtest.json?t=${Math.floor(Date.now() / 60000)}`
+];
+const BT_PERIODS = [["1y", "1 Jahr"], ["3y", "3 Jahre"], ["5y", "5 Jahre"], ["max", "Max"]];
+const GROUP_NAME = {buy: "Kaufen", hold: "Halten", sell: "Verkaufen"};
+const SIG_GROUP = {B: "buy", b: "buy", h: "hold", s: "sell", S: "sell"};
+const SIG_NAME = {B: "Stark kaufen", b: "Kaufen", h: "Halten", s: "Verkaufen", S: "Stark verkaufen"};
+const H_AFTER = {"1m": "1 Monat", "3m": "3 Monaten"};
+const day = s => new Date(s + "T12:00:00Z");
+const dateDE = (s, o = {day: "numeric", month: "long", year: "numeric"}) => day(s).toLocaleDateString("de-DE", {timeZone: "UTC", ...o});
+
+async function loadBacktest() {
+  const res = await Promise.allSettled(BT_SOURCES.map(u =>
+    fetch(u(), {cache: "no-store"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })));
+  const ok = res.filter(r => r.status === "fulfilled").map(r => r.value);
+  return ok.length ? ok.reduce((a, b) => (new Date(b.generated) > new Date(a.generated) ? b : a)) : null;
+}
+async function refreshBacktest() {
+  if (!D || !D.backtest_end || (BT && BT.end === D.backtest_end)) return;
+  try {
+    const b = await loadBacktest();
+    if (b) { BT = b; renderBacktest(); }
+  } catch (err) { console.error(err); }
+}
+
+function renderBtNow(c) {
+  const box = document.getElementById("btNow"), p = BT.periods.max;
+  const g = vtone(D.verdict), x = p && p.stats[c] && p.stats[c]["3m"][g];
+  if (!x || x.hit == null || x.n < 20) { box.hidden = true; return; }
+  const up = p.stats[c]["3m"].up;
+  const base = g === "buy" ? up : g === "sell" ? 100 - up : 50;
+  const verdict = D.verdict.charAt(0) + D.verdict.slice(1).toLowerCase();
+  const meaning = {buy: "der Kurs stand danach höher", sell: "der Kurs stand danach tiefer", hold: "der Kurs blieb ruhig"}[g];
+  box.hidden = false;
+  box.innerHTML = `Aktuell steht das Signal auf <b>${verdict}</b>. In der Rückrechnung seit ${dateDE(BT.start, {month: "long", year: "numeric"})} lag ` +
+    `„${GROUP_NAME[g]}“ nach 3 Monaten in <b>${fmt(x.hit, 0)} %</b> der Fälle richtig (${meaning}). Ein beliebiger Tag hätte ${fmt(base, 0)} % erreicht.`;
+}
+
+function renderBtSummary(p, c) {
+  const s = p.summary[c];
+  const cls = v => (v >= 0 ? "up" : "down");
+  document.getElementById("btResult").innerHTML =
+    `<div class="btstat"><small>Dem Signal gefolgt</small><b class="${cls(s.strategy)}">${signed(s.strategy, 1)} %</b>
+       <span>${fmt(s.invested, 0)} % der Zeit investiert · ${s.trades} Wechsel · größter Rückgang ${signed(s.dd_strategy, 1)} %</span></div>
+     <div class="btstat"><small>Gold durchgehend gehalten</small><b class="${cls(s.hold)}">${signed(s.hold, 1)} %</b>
+       <span>größter Rückgang ${signed(s.dd_hold, 1)} %</span></div>`;
+
+  const diff = Math.abs(s.strategy - s.hold);
+  let txt = s.strategy >= s.hold
+    ? `Dem Signal zu folgen wäre ${fmt(diff, 1)} Prozentpunkte besser gewesen als Gold durchgehend zu halten.`
+    : `Gold durchgehend zu halten wäre ${fmt(diff, 1)} Prozentpunkte besser gewesen als dem Signal zu folgen.`;
+  if (s.dd_strategy > s.dd_hold) txt += ` Dafür wäre der größte Rückgang mit ${signed(s.dd_strategy, 1)} % kleiner ausgefallen als ${signed(s.dd_hold, 1)} %.`;
+  else if (s.dd_strategy < s.dd_hold) txt += ` Auch der größte Rückgang wäre mit ${signed(s.dd_strategy, 1)} % nicht kleiner gewesen als bei Dauerhalten (${signed(s.dd_hold, 1)} %).`;
+  if (s.invested < 30) {
+    const k = p.stats[c]["1m"].buy.days;
+    txt += ` Das Signal hätte dich die meiste Zeit in Bargeld gehalten: ` +
+      (k === 0 ? "In diesem Zeitraum kam kein einziges Mal „Kaufen“, um wieder einzusteigen."
+               : `„Kaufen“ zeigte es nur an ${fmt(k, 0)} von ${fmt(p.days, 0)} Tagen, nach einem Verkauf wäre man oft lange draußen geblieben.`);
+  }
+  document.getElementById("btFazit").textContent = txt;
+}
+
+function renderBtChart(p, c) {
+  const strat = p.strategy[c], hold = p.hold[c], all = strat.concat(hold);
+  const log = Math.max(...all) / Math.min(...all) > 6;     // sonst wird die Linie des Signals bei großen Unterschieden flach
+  const years = (day(p.end) - day(p.start)) / (365.25 * 864e5);
+  const tickFmt = years > 2.5 ? {year: "numeric"} : {month: "short", year: "2-digit"};
+  if (btChart) btChart.destroy();
+  btChart = new Chart(document.getElementById("btChart"), {
+    type: "line",
+    data: {labels: p.t.map(d => dateDE(d, tickFmt)), datasets: [
+      {label: "Dem Signal gefolgt", data: strat, borderColor: css("--gold"), borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, order: 1},
+      {label: "Gold durchgehend gehalten", data: hold, borderColor: css("--silver"), borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, pointHoverRadius: 4, order: 2},
+      {label: "In Bargeld", data: p.out, yAxisID: "y2", stepped: true, fill: "origin", borderWidth: 0, pointRadius: 0,
+        backgroundColor: "rgba(192,86,63,.12)", order: 3}
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          filter: i => i.datasetIndex < 2,
+          callbacks: {
+            title: it => dateDE(p.t[it[0].dataIndex]),
+            label: it => `${it.dataset.label}: ${fmt(it.parsed.y, 1)} (${signed(it.parsed.y - 100, 1)} %)`,
+            footer: it => (p.out[it[0].dataIndex] ? "Nach dem Signal: in Bargeld" : "Nach dem Signal: investiert")
+          }
+        }
+      },
+      scales: {
+        x: {ticks: {maxTicksLimit: 7, maxRotation: 0, autoSkip: true}, grid: {display: false}},
+        y: {type: log ? "logarithmic" : "linear", grace: "3%",
+            ticks: {maxTicksLimit: 6, callback: v => {
+              if (!log) return fmt(v, 0);
+              const m = v / Math.pow(10, Math.floor(Math.log10(v)));
+              return [1, 2, 5].includes(Math.round(m * 100) / 100) ? fmt(v, 0) : "";
+            }}},
+        y2: {display: false, min: 0, max: 1}
+      }
+    }
+  });
+  document.getElementById("btChartNote").textContent =
+    `Wertentwicklung, Start ${dateDE(p.start)} = 100, in ${CUR[c].sym === "€" ? "Euro" : c === "usd" ? "US-Dollar" : "Lira"}. ` +
+    `Rot hinterlegt: Zeiten, in denen man nach dem Signal in Bargeld gewesen wäre (ohne Zinsen).` + (log ? " Logarithmische Achse, weil die Unterschiede groß sind." : "");
+}
+
+function renderBtCards(p, c) {
+  const wrap = document.getElementById("btCards");
+  wrap.innerHTML = "";
+  const st = p.stats[c];
+  ["buy", "hold", "sell"].forEach(g => {
+    const card = el("article", "btcard " + g);
+    const days = st["1m"][g].days, ph = p.episodes[g];
+    card.appendChild(el("h3", null, GROUP_NAME[g]));
+    card.appendChild(el("div", "days", days ? `an ${fmt(days, 0)} Tagen, in ${ph} ${ph === 1 ? "Phase" : "Phasen"}` : "in diesem Zeitraum nie"));
+    ["1m", "3m"].forEach(h => {
+      const x = st[h][g], up = st[h].up;
+      const calm = BT.calm[`${c}_${h}`];
+      const q = {buy: `Nach ${H_AFTER[h]} höher`, sell: `Nach ${H_AFTER[h]} tiefer`,
+                 hold: `Nach ${H_AFTER[h]} ruhig (unter ±${fmt(calm, 1)} %)`}[g];
+      const base = g === "buy" ? up : g === "sell" ? 100 - up : 50;
+      const row = el("div", "hitrow");
+      row.appendChild(el("div", "q", q));
+      if (x.hit == null) {
+        row.appendChild(el("div", "v", "–"));
+      } else {
+        const diff = x.hit - base;
+        const word = Math.abs(diff) < 5 ? "ähnlich wie der Vergleichswert" : diff > 0 ? "besser als der Vergleichswert" : "schlechter als der Vergleichswert";
+        const v = el("div", "v", `${fmt(x.hit, 0)} %`);
+        v.appendChild(el("small", null, `Ø Kursänderung danach ${signed(x.avg, 1)} %`));
+        row.appendChild(v);
+        const bar = el("div", "hitbar");
+        bar.setAttribute("role", "img");
+        bar.setAttribute("aria-label", `Trefferquote ${fmt(x.hit, 0)} Prozent, Vergleichswert ${fmt(base, 0)} Prozent`);
+        const fill = el("i"); fill.style.width = Math.min(100, x.hit) + "%";
+        const tick = el("b"); tick.style.left = `calc(${Math.min(100, base)}% - 1px)`;
+        bar.append(fill, tick);
+        row.appendChild(bar);
+        row.appendChild(el("div", "cmp", `Vergleich ${fmt(base, 0)} % (heller Strich) – ${word}` + (x.n < 30 ? ` · nur ${x.n} Tage, wenig aussagekräftig` : "")));
+      }
+      card.appendChild(row);
+    });
+    wrap.appendChild(card);
+  });
+  const s1 = st["1m"], s3 = st["3m"];
+  document.getElementById("btBase").textContent =
+    `Vergleichswert: So oft hätte ein beliebiger Tag richtig gelegen. Gold stieg in ${fmt(s1.up, 0)} % aller 1-Monats- und ${fmt(s3.up, 0)} % aller 3-Monats-Zeiträume. ` +
+    `„Kaufen“ muss diese Marke übertreffen, um mehr zu leisten als Zufall. Für „Verkaufen“ gilt der Rest (${fmt(100 - s1.up, 0)} % und ${fmt(100 - s3.up, 0)} %), für „Halten“ rund 50 %.`;
+}
+
+function renderBtStrip(c) {
+  const S = BT.strip, key = `${c}_${state.btH}`, ok = S.ok[key];
+  const box = document.getElementById("btStrip");
+  box.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  S.dates.forEach((d, i) => {
+    const bar = el("span", "bd");
+    bar.dataset.i = i;
+    const top = el("i", "s");
+    top.style.background = css("--" + SIG_GROUP[S.sig[i]]);
+    bar.append(top, el("i", "m " + (ok[i] === "1" ? "ok" : ok[i] === "0" ? "no" : "na")));
+    frag.appendChild(bar);
+  });
+  box.appendChild(frag);
+  const right = (ok.match(/1/g) || []).length, wrong = (ok.match(/0/g) || []).length;
+  const summary = `${S.dates.length} Handelstage von ${dateDE(S.dates[0])} bis ${dateDE(S.dates[S.dates.length - 1])}; ` +
+    `bei ${right + wrong} davon steht das Ergebnis nach ${H_AFTER[state.btH]} fest: ${right} richtig, ${wrong} falsch.`;
+  box.setAttribute("aria-label", summary);
+  document.getElementById("btStripLede").textContent = summary +
+    (right + wrong ? ` Das sind ${fmt(right / (right + wrong) * 100, 0)} % richtig.` : "");
+  document.getElementById("btRead").textContent = "Fahre über einen Tag oder tippe ihn an, um Details zu sehen.";
+  document.querySelectorAll("#btHorizonSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.h === state.btH)));
+}
+
+function btReadout(i) {
+  const S = BT.strip, c = state.cur, key = `${c}_${state.btH}`;
+  const ch = S.sig[i], r = S.ret[key][i], ok = S.ok[key][i], g = SIG_GROUP[ch];
+  let txt = `${dateDE(S.dates[i], {weekday: "short", day: "numeric", month: "long", year: "numeric"})}: ${SIG_NAME[ch]}. `;
+  if (ok === "-") txt += `Nach ${H_AFTER[state.btH]} ist noch nicht entschieden.`;
+  else {
+    const why = g === "hold" ? (ok === "1" ? " (Kurs blieb ruhig)" : " (Kurs bewegte sich stärker als üblich)") : "";
+    txt += `Kurs nach ${H_AFTER[state.btH]}: ${signed(r, 1)} % → ${ok === "1" ? "richtig" : "falsch"}${why}.`;
+  }
+  document.getElementById("btRead").textContent = txt;
+}
+
+function renderBacktest() {
+  const sec = document.getElementById("btSection");
+  const c = state.cur;
+  const keys = BT && BT.periods ? BT_PERIODS.map(x => x[0]).filter(k => BT.periods[k] && BT.periods[k].summary[c]) : [];
+  if (!D || !keys.length) { sec.hidden = true; return; }
+  sec.hidden = false;
+  if (!keys.includes(state.btP)) state.btP = keys.includes("max") ? "max" : keys[keys.length - 1];
+  const seg = document.getElementById("btPeriodSeg");
+  seg.innerHTML = "";
+  BT_PERIODS.filter(([k]) => keys.includes(k)).forEach(([k, label]) => {
+    const b = el("button", null, label);
+    b.type = "button"; b.dataset.p = k;
+    b.setAttribute("aria-pressed", String(k === state.btP));
+    seg.appendChild(b);
+  });
+  const p = BT.periods[state.btP];
+  document.getElementById("btLede").textContent =
+    `Rückrechnung: Dieselben vier Werkzeuge und Schwellen wie oben, angewendet auf jeden Handelstag von ${dateDE(p.start)} bis ${dateDE(p.end)} ` +
+    `(${fmt(p.days, 0)} Tage). Für jeden Tag zählt nur, was damals bekannt war. Danach wird geprüft, was der Kurs wirklich gemacht hat.`;
+  renderBtNow(c);
+  renderBtSummary(p, c);
+  renderBtChart(p, c);
+  renderBtCards(p, c);
+  renderBtStrip(c);
+}
+
 /* ---------- Gesamt ---------- */
 function renderStale(d) {
   const box = document.getElementById("stale");
@@ -497,6 +803,9 @@ function render(d) {
     s.title = `${h.date}: ${h.verdict} (${h.score > 0 ? "+" : ""}${h.score})`;
     strip.appendChild(s);
   });
+
+  if (BT) renderBacktest();    // Signal "aktuell" im Hinweis kann sich geändert haben
+  refreshBacktest();
 }
 
 function syncCurButtons() {
@@ -506,8 +815,30 @@ document.getElementById("curSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || b.dataset.cur === state.cur) return;
   state.cur = b.dataset.cur; store.set("gr-cur", state.cur);
   syncCurButtons();
-  if (D) { renderHero(); renderPrice(); renderTools(); }
+  if (D) { renderHero(); renderPrice(); renderTools(); if (BT) renderBacktest(); }
 });
+document.getElementById("btPeriodSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.dataset.p === state.btP) return;
+  state.btP = b.dataset.p; store.set("gr-btp", state.btP);
+  renderBacktest();
+});
+document.getElementById("btHorizonSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.dataset.h === state.btH) return;
+  state.btH = b.dataset.h; store.set("gr-bth", state.btH);
+  if (BT) renderBtStrip(state.cur);
+});
+// Tag über die Position im Band bestimmen (nicht über den einzelnen, teils nur 1 px breiten Balken): funktioniert mit Maus und Finger
+const btStripEl = document.getElementById("btStrip");
+function btPick(e) {
+  if (!BT) return;
+  const r = btStripEl.getBoundingClientRect(), n = BT.strip.dates.length;
+  const i = Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left) / r.width * n)));
+  btStripEl.querySelectorAll(".bd.on").forEach(x => x.classList.remove("on"));
+  btStripEl.children[i].classList.add("on");
+  btReadout(i);
+}
+btStripEl.addEventListener("pointermove", btPick);
+btStripEl.addEventListener("pointerdown", btPick);
 document.getElementById("rangeSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   state.range = b.dataset.range; store.set("gr-range", state.range);
