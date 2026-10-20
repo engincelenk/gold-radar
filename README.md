@@ -51,12 +51,15 @@ Getestet in `tests/test_spot.py`, u. a. mit einem simulierten 30-Tage-Monat im 1
 
 ## Rückblick: Lag das Signal richtig?
 `scripts/backtest.py` rechnet die vier Werkzeuge mit denselben Schwellen (`CFG`) für jeden Handelstag der letzten ca. 9 Jahre nach
-und prüft hinterher, ob das Signal gestimmt hat. Die Seite zeigt das im Abschnitt „Lag das Signal richtig?“:
+und prüft hinterher, ob das Signal gestimmt hat. Die Seite zeigt das im Abschnitt „Was wäre, wenn du dem Signal gefolgt wärst?“:
 
+- **Dem Signal gefolgt vs. Gold durchgehend gehalten** für 4 Wochen, 3 und 6 Monate, 1, 3, 5 Jahre und Max (Standard: 4 Wochen), in Euro, Dollar und Lira,
+  als Beispielbetrag (aus 1.000 € wird …), mit der Liste der Signalwechsel („bisher richtig/falsch“) und Markierungen im Chart.
+  Start investiert, Kaufen = investiert, Verkaufen = Bargeld (ohne Zinsen), Halten = Position behalten. Ohne Gebühren, Spreads und Steuern.
+  Kurze Zeiträume werden tageweise, lange wochenweise gespeichert.
 - **Trefferquote** je Signal (Kaufen / Halten / Verkaufen) nach 1 und 3 Monaten, mit Vergleichswert (wie oft ein beliebiger Tag richtig gelegen hätte).
   Kaufen ist richtig, wenn der Kurs danach höher steht, Verkaufen, wenn er tiefer steht, Halten, wenn der Kurs ruhiger blieb als an einem typischen Tag.
-- **Dem Signal gefolgt vs. Gold durchgehend gehalten** für 1, 3, 5 Jahre und Max, in Euro, Dollar und Lira. Start investiert, Kaufen = investiert,
-  Verkaufen = Bargeld (ohne Zinsen), Halten = Position behalten. Ohne Gebühren, Spreads und Steuern.
+  Bei Zeiträumen unter einem Jahr gilt die gesamte Rückrechnung.
 - **Tagesband der letzten 12 Monate** mit Treffer-Markierung pro Tag.
 
 Kein Blick in die Zukunft: Jedes Signal nutzt nur Kurse bis zu seinem Tag; `tests/test_backtest.py` prüft das und vergleicht die Rückrechnung

@@ -351,7 +351,8 @@ def refresh_backtest(force: bool = False) -> dict | None:
             prev_bt = json.loads(BT_OUT.read_text(encoding="utf-8"))
         except ValueError:
             print("  backtest.json ist beschädigt und wird neu berechnet")
-    if not (force or backtest.is_due(prev_bt.get("generated"))):
+    outdated = prev_bt.get("schema") != backtest.SCHEMA   # neues Dateiformat nach einem Code-Update: sofort neu rechnen
+    if not (force or outdated or backtest.is_due(prev_bt.get("generated"))):
         return prev_bt or None
     print("Rechne Rückblick auf 10 Jahre …")
     try:

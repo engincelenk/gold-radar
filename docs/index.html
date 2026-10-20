@@ -102,6 +102,23 @@ details ul{margin:6px 0 0;padding-left:18px}
 .st-ok{color:#8fd0b0} .st-err{color:#e59a88}
 @media (max-width:560px){.newslist li{grid-template-columns:1fr}.badge{justify-self:start;min-width:0}}
 
+/* Aufklappbarer Bereich (Nachrichten) */
+details.fold{margin-top:44px;color:var(--text);font-size:inherit}
+details.fold>summary{list-style:none;cursor:pointer;padding:6px 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px;border-radius:6px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"▸";color:var(--gold);font-size:1.4rem;line-height:1;display:inline-block;width:1em;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary h2{margin:0;display:inline}
+details.fold>summary:hover h2{color:var(--gold)}
+details.fold>summary .foldline{color:var(--muted);font-size:.9rem;flex:1 1 100%;padding-left:1.4em}
+details.fold>summary .foldline b{font-weight:600}
+.foldline .t-up{color:#8fd0b0} .foldline .t-down{color:#e59a88} .foldline .t-flat{color:var(--hold)}
+details.fold>.lede{margin-top:12px}
+@media (prefers-reduced-motion:reduce){details.fold>summary::before{transition:none}}
+.whyd{margin-top:4px;font-size:.85rem}
+.whyd>summary{display:inline-block;color:var(--gold);padding:0}
+.whyd .why{margin-top:4px}
+
 /* Verlauf */
 .strip{display:flex;gap:2px;height:34px;overflow-x:auto}
 .strip span{flex:0 0 5px;border-radius:1px}
@@ -118,7 +135,16 @@ details ul{margin:6px 0 0;padding-left:18px}
 .btstat b{display:block;font-family:var(--cond);font-size:2.5rem;font-weight:600;line-height:1.1}
 .btstat b.up{color:var(--buy)} .btstat b.down{color:var(--sell)}
 .btstat span{display:block;color:var(--muted);font-size:.85rem}
-.btfazit{margin:14px 0 0;max-width:75ch}
+.btstat .ret{display:inline;font-weight:600} .btstat .ret.up{color:var(--buy)} .btstat .ret.down{color:var(--sell)}
+.btfazit{margin:14px 0 0;max-width:75ch;font-weight:500}
+h3.bth2{font-family:var(--cond);font-weight:600;font-size:1.15rem;margin:20px 0 6px}
+.bttrades{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bttrades li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:10px 12px;background:rgba(255,255,255,.03);border-left:3px solid var(--line);border-radius:2px 6px 6px 2px}
+.bttrades li.buy{border-left-color:var(--buy)} .bttrades li.sell{border-left-color:var(--sell)} .bttrades li.none{border-left-color:var(--hold)}
+.bttrades .what{font-weight:600}
+.bttrades .res{font-size:.88rem;color:var(--muted)}
+.bttrades .verdict{font-size:.8rem;font-weight:600;padding:1px 8px;border-radius:10px;background:var(--line);color:var(--text);white-space:nowrap}
+.bttrades .verdict.ok{background:rgba(78,154,116,.25);color:#8fd0b0} .bttrades .verdict.no{background:rgba(192,86,63,.25);color:#e59a88}
 .btchart{position:relative;height:300px;margin-top:14px}
 @media (max-width:560px){.btchart{height:240px}}
 .btcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:18px}
@@ -195,17 +221,22 @@ a{color:var(--gold)}
   <div class="tools" id="tools"></div>
 
   <section id="newsSection" hidden>
-    <h2>Nachrichten mit Einfluss auf den Goldpreis</h2>
-    <p class="lede" id="newsLede"></p>
-    <div class="newsbox">
-      <div class="newshead"><div class="newslabel" id="newsLabel" data-tone="flat"></div></div>
-      <p class="sub" id="newsSummary" style="margin-top:6px"></p>
-      <ul class="chips" id="newsChips"></ul>
-      <div id="newsWarn"></div>
-      <ul class="newslist" id="newsList"></ul>
-      <details><summary>Quellen und Status</summary><ul id="newsSources"></ul></details>
-      <p class="note">Automatische Schlagwort-Auswertung der Überschriften nach festen Regeln, kein Ersatz für eigenes Urteil. Sie erkennt Themen und Richtung, versteht aber keinen Zusammenhang im Detail.</p>
-    </div>
+    <details class="fold" id="newsFold">
+      <summary>
+        <h2>Nachrichten mit Einfluss auf den Goldpreis</h2>
+        <span class="foldline" id="newsFoldLine"></span>
+      </summary>
+      <p class="lede" id="newsLede"></p>
+      <div class="newsbox">
+        <div class="newshead"><div class="newslabel" id="newsLabel" data-tone="flat"></div></div>
+        <p class="sub" id="newsSummary" style="margin-top:6px"></p>
+        <ul class="chips" id="newsChips"></ul>
+        <div id="newsWarn"></div>
+        <ul class="newslist" id="newsList"></ul>
+        <details><summary>Quellen und Status</summary><ul id="newsSources"></ul></details>
+        <p class="note">Automatische Schlagwort-Auswertung der Überschriften nach festen Regeln, kein Ersatz für eigenes Urteil. Sie erkennt Themen und Richtung, versteht aber keinen Zusammenhang im Detail.</p>
+      </div>
+    </details>
   </section>
 
   <h2>Verlauf des Signals</h2>
@@ -218,18 +249,23 @@ a{color:var(--gold)}
   </div>
 
   <section id="btSection" hidden>
-    <h2>Lag das Signal richtig?</h2>
+    <h2>Was wäre, wenn du dem Signal gefolgt wärst?</h2>
     <p class="lede" id="btLede"></p>
-    <p class="btnow" id="btNow" hidden></p>
     <div class="bt-controls">
       <div class="seg" role="group" aria-label="Zeitraum des Rückblicks" id="btPeriodSeg"></div>
     </div>
     <div class="btbox">
       <div class="btresult" id="btResult"></div>
       <p class="btfazit" id="btFazit"></p>
+      <h3 class="bth2">Was das Signal getan hätte</h3>
+      <ul class="bttrades" id="btTrades"></ul>
       <div class="btchart"><canvas id="btChart" role="img" aria-label="Wertentwicklung: dem Signal folgen gegenüber Gold durchgehend halten"></canvas></div>
       <p class="note" id="btChartNote"></p>
     </div>
+
+    <h3 class="bth">Wie zuverlässig war das Signal?</h3>
+    <p class="lede" id="btRelLede"></p>
+    <p class="btnow" id="btNow" hidden></p>
     <div class="btcards" id="btCards"></div>
     <p class="note" id="btBase"></p>
 
@@ -301,7 +337,7 @@ const GRAIN = {"5m": "5-Minuten-Werte", "15m": "15-Minuten-Werte", "60m": "Stund
 
 const CUR = {eur: {sym: "€", sfx: "_eur"}, usd: {sym: "$", sfx: ""}, try: {sym: "₺", sfx: "_try"}};
 const state = {cur: CUR[store.get("gr-cur")] ? store.get("gr-cur") : "eur", range: store.get("gr-range") || "month",
-  btP: store.get("gr-btp") || "max", btH: store.get("gr-bth") === "3m" ? "3m" : "1m"};
+  btP: store.get("gr-btp") || "4w", btH: store.get("gr-bth") === "3m" ? "3m" : "1m"};
 let D = null, priceChart = null, toolCharts = [], BT = null, btChart = null;
 const sym = () => CUR[state.cur].sym;
 const money = (n, d = 0) => `${fmt(n, d)} ${sym()}`;
@@ -489,6 +525,12 @@ function renderNews() {
   lab.append(N.label, el("small", null, "für den Goldpreis"));
   document.getElementById("newsSummary").textContent = N.summary;
 
+  // Kurzzeile, die auch im zugeklappten Zustand sichtbar ist
+  const fl = document.getElementById("newsFoldLine");
+  fl.textContent = "";
+  const themes = (N.themes || []).filter(t => t.dir !== 0).slice(0, 3).map(t => `${t.dir > 0 ? "▲" : "▼"} ${t.topic}`).join("  ");
+  fl.append(el("b", {up: "t-up", down: "t-down", flat: "t-flat"}[N.tone], N.label), ` für den Goldpreis` + (themes ? ` · ${themes}` : "") + ` · ${st.relevant ?? 0} relevante Meldungen`);
+
   const chips = document.getElementById("newsChips");
   chips.innerHTML = "";
   (N.themes || []).filter(t => t.dir !== 0).forEach(t => {
@@ -522,7 +564,9 @@ function renderNews() {
     else head = el("span", null, i.title);
     body.appendChild(head);
     body.appendChild(el("div", "meta", [i.group === "analysen" ? "Analyse" : "News", i.source, ago(i.published), i.topics.join(", ")].filter(Boolean).join(" · ")));
-    body.appendChild(el("p", "why", i.why));
+    const why = el("details", "whyd");
+    why.append(el("summary", null, "Warum?"), el("p", "why", i.why));
+    body.appendChild(why);
     li.appendChild(body);
     list.appendChild(li);
   });
@@ -541,7 +585,7 @@ const BT_SOURCES = [
   () => `https://raw.githubusercontent.com/engincelenk/gold-radar/data/backtest.json?t=${Math.floor(Date.now() / 60000)}`,
   () => `backtest.json?t=${Math.floor(Date.now() / 60000)}`
 ];
-const BT_PERIODS = [["1y", "1 Jahr"], ["3y", "3 Jahre"], ["5y", "5 Jahre"], ["max", "Max"]];
+const BT_PERIODS = [["4w", "4 Wochen"], ["3mo", "3 Monate"], ["6mo", "6 Monate"], ["1y", "1 Jahr"], ["3y", "3 Jahre"], ["5y", "5 Jahre"], ["max", "Max"]];
 const GROUP_NAME = {buy: "Kaufen", hold: "Halten", sell: "Verkaufen"};
 const SIG_GROUP = {B: "buy", b: "buy", h: "hold", s: "sell", S: "sell"};
 const SIG_NAME = {B: "Stark kaufen", b: "Kaufen", h: "Halten", s: "Verkaufen", S: "Stark verkaufen"};
@@ -576,22 +620,32 @@ function renderBtNow(c) {
     `„${GROUP_NAME[g]}“ nach 3 Monaten in <b>${fmt(x.hit, 0)} %</b> der Fälle richtig (${meaning}). Ein beliebiger Tag hätte ${fmt(base, 0)} % erreicht.`;
 }
 
+const BASE_AMOUNT = {eur: 1000, usd: 1000, try: 10000};   // Beispielbetrag zum Start des Zeitraums
+
 function renderBtSummary(p, c) {
-  const s = p.summary[c];
+  const s = p.summary[c], base = BASE_AMOUNT[c], sy = CUR[c].sym;
   const cls = v => (v >= 0 ? "up" : "down");
+  const amount = pct => `${fmt(base * (1 + pct / 100), 0)} ${sy}`;
+  const long = p.days >= 252;
   document.getElementById("btResult").innerHTML =
-    `<div class="btstat"><small>Dem Signal gefolgt</small><b class="${cls(s.strategy)}">${signed(s.strategy, 1)} %</b>
-       <span>${fmt(s.invested, 0)} % der Zeit investiert · ${s.trades} Wechsel · größter Rückgang ${signed(s.dd_strategy, 1)} %</span></div>
-     <div class="btstat"><small>Gold durchgehend gehalten</small><b class="${cls(s.hold)}">${signed(s.hold, 1)} %</b>
-       <span>größter Rückgang ${signed(s.dd_hold, 1)} %</span></div>`;
+    `<div class="btstat"><small>Dem Signal gefolgt</small><b class="${cls(s.strategy)}">${amount(s.strategy)}</b>
+       <span><span class="ret ${cls(s.strategy)}">${signed(s.strategy, 1)} %</span> aus ${fmt(base, 0)} ${sy} · ${s.trades === 0 ? "kein Wechsel" : `${s.trades} Wechsel`}` +
+       (long ? ` · ${fmt(s.invested, 0)} % der Zeit investiert` : "") + `</span></div>
+     <div class="btstat"><small>Gold durchgehend gehalten</small><b class="${cls(s.hold)}">${amount(s.hold)}</b>
+       <span><span class="ret ${cls(s.hold)}">${signed(s.hold, 1)} %</span> aus ${fmt(base, 0)} ${sy}</span></div>`;
 
   const diff = Math.abs(s.strategy - s.hold);
-  let txt = s.strategy >= s.hold
-    ? `Dem Signal zu folgen wäre ${fmt(diff, 1)} Prozentpunkte besser gewesen als Gold durchgehend zu halten.`
-    : `Gold durchgehend zu halten wäre ${fmt(diff, 1)} Prozentpunkte besser gewesen als dem Signal zu folgen.`;
-  if (s.dd_strategy > s.dd_hold) txt += ` Dafür wäre der größte Rückgang mit ${signed(s.dd_strategy, 1)} % kleiner ausgefallen als ${signed(s.dd_hold, 1)} %.`;
-  else if (s.dd_strategy < s.dd_hold) txt += ` Auch der größte Rückgang wäre mit ${signed(s.dd_strategy, 1)} % nicht kleiner gewesen als bei Dauerhalten (${signed(s.dd_hold, 1)} %).`;
-  if (s.invested < 30) {
+  let txt;
+  if (s.trades === 0) txt = `Das Signal hätte in diesem Zeitraum keinen Wechsel ausgelöst. Du wärst durchgehend investiert geblieben, das Ergebnis entspricht Gold halten.`;
+  else if (diff < 0.05) txt = `Dem Signal zu folgen und Gold zu halten hätte praktisch dasselbe gebracht.`;
+  else txt = s.strategy > s.hold
+    ? `Dem Signal zu folgen hätte ${fmt(diff, 1)} Prozentpunkte mehr gebracht als Gold zu halten.`
+    : `Gold zu halten hätte ${fmt(diff, 1)} Prozentpunkte mehr gebracht als dem Signal zu folgen.`;
+  if (s.trades > 0 && p.days >= 60) {
+    if (s.dd_strategy > s.dd_hold) txt += ` Dafür wäre der größte Rückgang mit ${signed(s.dd_strategy, 1)} % kleiner ausgefallen als ${signed(s.dd_hold, 1)} %.`;
+    else if (s.dd_strategy < s.dd_hold) txt += ` Der größte Rückgang wäre mit ${signed(s.dd_strategy, 1)} % nicht kleiner gewesen als beim Halten (${signed(s.dd_hold, 1)} %).`;
+  }
+  if (long && s.invested < 30) {
     const k = p.stats[c]["1m"].buy.days;
     txt += ` Das Signal hätte dich die meiste Zeit in Bargeld gehalten: ` +
       (k === 0 ? "In diesem Zeitraum kam kein einziges Mal „Kaufen“, um wieder einzusteigen."
@@ -600,16 +654,44 @@ function renderBtSummary(p, c) {
   document.getElementById("btFazit").textContent = txt;
 }
 
+function renderBtTrades(p, c) {
+  const ul = document.getElementById("btTrades");
+  ul.innerHTML = "";
+  if (!p.trades.length) {
+    ul.appendChild(el("li", "none", `Kein Wechsel: Das Signal wäre ab ${dateDE(p.start)} nie auf „Verkaufen“ gesprungen.`));
+    return;
+  }
+  const end = p.price1[c];
+  p.trades.forEach(t => {
+    const since = (end / t[c] - 1) * 100;
+    const open = t.d === p.end || Math.abs(since) < 0.05;
+    const good = t.a === "sell" ? since < 0 : since > 0;     // verkauft: seitdem gefallen = richtig; gekauft: seitdem gestiegen = richtig
+    const li = el("li", t.a);
+    li.append(
+      el("span", "what", t.a === "sell" ? "Verkaufen → in Bargeld" : "Kaufen → wieder investiert"),
+      el("span", null, dateDE(t.d, {weekday: "short", day: "numeric", month: "long", year: "numeric"})),
+      el("span", "res", `Gold stand bei ${money(t[c])} pro Unze` + (t.d === p.end ? "" : `, seitdem ${signed(since, 1)} %`)),
+      el("span", "verdict " + (open ? "" : good ? "ok" : "no"), open ? "noch offen" : good ? "bisher richtig" : "bisher falsch")
+    );
+    ul.appendChild(li);
+  });
+}
+
 function renderBtChart(p, c) {
-  const strat = p.strategy[c], hold = p.hold[c], all = strat.concat(hold);
+  const base = BASE_AMOUNT[c], k = base / 100, sy = CUR[c].sym;
+  const strat = p.strategy[c].map(v => v * k), hold = p.hold[c].map(v => v * k), all = strat.concat(hold);
   const log = Math.max(...all) / Math.min(...all) > 6;     // sonst wird die Linie des Signals bei großen Unterschieden flach
+  const daily = p.days <= 130;
   const years = (day(p.end) - day(p.start)) / (365.25 * 864e5);
-  const tickFmt = years > 2.5 ? {year: "numeric"} : {month: "short", year: "2-digit"};
+  const tickFmt = daily ? {day: "numeric", month: "short"} : years > 2.5 ? {year: "numeric"} : {month: "short", year: "2-digit"};
+  const tradeAt = new Map(p.trades.map(t => [t.k, t]));
   if (btChart) btChart.destroy();
   btChart = new Chart(document.getElementById("btChart"), {
     type: "line",
     data: {labels: p.t.map(d => dateDE(d, tickFmt)), datasets: [
-      {label: "Dem Signal gefolgt", data: strat, borderColor: css("--gold"), borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, order: 1},
+      {label: "Dem Signal gefolgt", data: strat, borderColor: css("--gold"), borderWidth: 2, order: 1,
+        pointRadius: ctx => (tradeAt.has(ctx.dataIndex) ? 6 : 0), pointHoverRadius: ctx => (tradeAt.has(ctx.dataIndex) ? 7 : 4),
+        pointBackgroundColor: ctx => css(tradeAt.get(ctx.dataIndex)?.a === "buy" ? "--buy" : "--sell"), pointBorderColor: css("--text"), pointBorderWidth: 1.5},
       {label: "Gold durchgehend gehalten", data: hold, borderColor: css("--silver"), borderWidth: 1.5, borderDash: [5, 3], pointRadius: 0, pointHoverRadius: 4, order: 2},
       {label: "In Bargeld", data: p.out, yAxisID: "y2", stepped: true, fill: "origin", borderWidth: 0, pointRadius: 0,
         backgroundColor: "rgba(192,86,63,.12)", order: 3}
@@ -623,8 +705,11 @@ function renderBtChart(p, c) {
           filter: i => i.datasetIndex < 2,
           callbacks: {
             title: it => dateDE(p.t[it[0].dataIndex]),
-            label: it => `${it.dataset.label}: ${fmt(it.parsed.y, 1)} (${signed(it.parsed.y - 100, 1)} %)`,
-            footer: it => (p.out[it[0].dataIndex] ? "Nach dem Signal: in Bargeld" : "Nach dem Signal: investiert")
+            label: it => `${it.dataset.label}: ${fmt(it.parsed.y, 0)} ${sy} (${signed(it.parsed.y / base * 100 - 100, 1)} %)`,
+            footer: it => {
+              const i = it[0].dataIndex, t = tradeAt.get(i);
+              return [p.out[i] ? "Nach dem Signal: in Bargeld" : "Nach dem Signal: investiert"].concat(t ? [`Signalwechsel: ${t.a === "sell" ? "Verkaufen" : "Kaufen"}`] : []);
+            }
           }
         }
       },
@@ -641,7 +726,7 @@ function renderBtChart(p, c) {
     }
   });
   document.getElementById("btChartNote").textContent =
-    `Wertentwicklung, Start ${dateDE(p.start)} = 100, in ${CUR[c].sym === "€" ? "Euro" : c === "usd" ? "US-Dollar" : "Lira"}. ` +
+    `Aus ${fmt(base, 0)} ${sy} am ${dateDE(p.start)} (Schlusskurse). Die Punkte zeigen Signalwechsel (rot: Verkaufen, grün: Kaufen). ` +
     `Rot hinterlegt: Zeiten, in denen man nach dem Signal in Bargeld gewesen wäre (ohne Zinsen).` + (log ? " Logarithmische Achse, weil die Unterschiede groß sind." : "");
 }
 
@@ -731,7 +816,7 @@ function renderBacktest() {
   const keys = BT && BT.periods ? BT_PERIODS.map(x => x[0]).filter(k => BT.periods[k] && BT.periods[k].summary[c]) : [];
   if (!D || !keys.length) { sec.hidden = true; return; }
   sec.hidden = false;
-  if (!keys.includes(state.btP)) state.btP = keys.includes("max") ? "max" : keys[keys.length - 1];
+  if (!keys.includes(state.btP)) state.btP = keys.includes("4w") ? "4w" : keys[0];
   const seg = document.getElementById("btPeriodSeg");
   seg.innerHTML = "";
   BT_PERIODS.filter(([k]) => keys.includes(k)).forEach(([k, label]) => {
@@ -742,12 +827,20 @@ function renderBacktest() {
   });
   const p = BT.periods[state.btP];
   document.getElementById("btLede").textContent =
-    `Rückrechnung: Dieselben vier Werkzeuge und Schwellen wie oben, angewendet auf jeden Handelstag von ${dateDE(p.start)} bis ${dateDE(p.end)} ` +
-    `(${fmt(p.days, 0)} Tage). Für jeden Tag zählt nur, was damals bekannt war. Danach wird geprüft, was der Kurs wirklich gemacht hat.`;
+    `Du startest am ${dateDE(p.start)} mit Gold und richtest dich nach den vier Werkzeugen von oben: „Verkaufen“ heißt in Bargeld wechseln, ` +
+    `„Kaufen“ wieder einsteigen, „Halten“ nichts ändern. Jeden Tag zählt nur, was an dem Tag bekannt war (Schlusskurse bis ${dateDE(p.end)}).`;
+
+  // Treffer-Auswertung: für kurze Zeiträume zu dünn (die Kurse nach 1 bzw. 3 Monaten stehen noch aus), dann gilt die ganze Rückrechnung
+  const hist = p.days >= 252 ? p : BT.periods.max;
+  document.getElementById("btRelLede").textContent = p.days >= 252
+    ? `Wie oft das Signal von ${dateDE(hist.start, {month: "long", year: "numeric"})} bis ${dateDE(hist.end, {month: "long", year: "numeric"})} gestimmt hat.`
+    : `Für so kurze Zeiträume ist das zu dünn: Die Kurse nach 1 oder 3 Monaten stehen noch aus. Deshalb gilt hier die gesamte Rückrechnung ` +
+      `von ${dateDE(hist.start, {month: "long", year: "numeric"})} bis ${dateDE(hist.end, {month: "long", year: "numeric"})}.`;
   renderBtNow(c);
   renderBtSummary(p, c);
+  renderBtTrades(p, c);
   renderBtChart(p, c);
-  renderBtCards(p, c);
+  renderBtCards(hist, c);
   renderBtStrip(c);
 }
 
@@ -827,6 +920,11 @@ document.getElementById("btHorizonSeg").addEventListener("click", e => {
   state.btH = b.dataset.h; store.set("gr-bth", state.btH);
   if (BT) renderBtStrip(state.cur);
 });
+// Nachrichten: zugeklappt starten, die Wahl des Nutzers merken
+const newsFold = document.getElementById("newsFold");
+newsFold.open = store.get("gr-news") === "1";
+newsFold.addEventListener("toggle", () => store.set("gr-news", newsFold.open ? "1" : "0"));
+
 // Tag über die Position im Band bestimmen (nicht über den einzelnen, teils nur 1 px breiten Balken): funktioniert mit Maus und Finger
 const btStripEl = document.getElementById("btStrip");
 function btPick(e) {

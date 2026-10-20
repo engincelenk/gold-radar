@@ -14,12 +14,15 @@ import update  # noqa: E402
 CFG = update.CFG
 
 
-def synthetic(n=900, seed=7):
-    """Zufallsähnliche Kurse mit Aufwärtstrend; Gold, Silber, Realzins, Wechselkurse an denselben Handelstagen."""
+def synthetic(n=900, seed=7, gsr_wave=False):
+    """Zufallsähnliche Kurse mit Aufwärtstrend; Gold, Silber, Realzins, Wechselkurse an denselben Handelstagen.
+    gsr_wave=True: Silber so gewählt, dass das Gold/Silber-Verhältnis zwischen ca. 42 und 98 pendelt -> es gibt Kaufen- und Verkaufen-Signale."""
     rng = np.random.default_rng(seed)
     idx = pd.bdate_range("2020-01-01", periods=n)
     gold = pd.Series(1500 * np.exp(np.cumsum(rng.normal(0.0004, 0.011, n))), index=idx)
     silver = pd.Series(18 * np.exp(np.cumsum(rng.normal(0.0003, 0.018, n))), index=idx)
+    if gsr_wave:
+        silver = gold / (70 + 28 * np.sin(2 * np.pi * np.arange(n) / 300))
     real = pd.Series(0.5 + np.cumsum(rng.normal(0, 0.03, n)), index=idx)
     eur = pd.Series(1.1 + np.cumsum(rng.normal(0, 0.002, n)), index=idx)
     tl = pd.Series(7 * np.exp(np.cumsum(rng.normal(0.0008, 0.004, n))), index=idx)
@@ -107,6 +110,37 @@ class BuildTest(unittest.TestCase):
         for key in ("usd_1m", "usd_3m", "try_1m", "eur_3m"):
             self.assertEqual(len(s["ok"][key]), len(s["dates"]))
             self.assertEqual(len(s["ret"][key]), len(s["dates"]))
+
+    def test_short_periods_are_daily_long_periods_weekly(self):
+        per = self.bt["periods"]
+        for key, days in (("4w", 20), ("3mo", 63), ("6mo", 126)):
+            self.assertEqual(per[key]["days"], days)
+            self.assertEqual(len(per[key]["t"]), days)          # tageweise gespeichert
+            self.assertEqual(len(per[key]["strategy"]["usd"]), days)
+        self.assertLess(len(per["1y"]["t"]), per["1y"]["days"])  # wochenweise gespeichert
+        self.assertEqual(per["1y"]["t"][-1], per["1y"]["end"])   # letzter Tag ist immer dabei
+        self.assertEqual(self.bt["schema"], backtest.SCHEMA)
+
+    def test_trades_replay_to_the_same_position_and_prices(self):
+        gold, silver, real, eur, tl = synthetic(1500, gsr_wave=True)
+        df = backtest.signal_frame(gold, silver, real, eur, tl, CFG)
+        bt = backtest.build(gold, silver, real, eur, tl, CFG, now=self.now.replace(year=2026))
+        self.assertGreaterEqual(len(bt["periods"]["max"]["trades"]), 2)   # Testdaten erzeugen tatsächlich Signale
+        for key in ("3mo", "1y", "max"):
+            p = bt["periods"][key]
+            pos = 1                                              # Start: investiert
+            for tr in p["trades"]:
+                self.assertEqual(tr["a"], "sell" if pos == 1 else "buy")   # Wechsel wechseln sich ab, Start ist "investiert"
+                pos = 1 - pos
+                self.assertAlmostEqual(tr["usd"], round(float(df.gold.loc[tr["d"]]), 2), places=2)
+                self.assertAlmostEqual(tr["try"], round(float(df["try"].loc[tr["d"]]), 2), places=2)
+                self.assertLessEqual(p["start"], tr["d"])
+                self.assertLessEqual(tr["d"], p["end"])
+                self.assertLess(tr["k"], len(p["t"]))
+                self.assertGreaterEqual(p["t"][tr["k"]], tr["d"])  # Index zeigt auf den Tag selbst oder den nächsten gespeicherten
+            self.assertEqual(p["out"][-1], 1 - pos)               # Position am Ende stimmt mit der Kurve überein
+            self.assertEqual(p["summary"]["usd"]["trades"], len(p["trades"]))
+            self.assertAlmostEqual(p["price1"]["usd"], round(float(df.gold.loc[p["end"]]), 2), places=2)
 
     def test_recent_days_are_pending_older_days_are_scored(self):
         ok = self.bt["strip"]["ok"]["usd_1m"]

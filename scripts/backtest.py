@@ -25,8 +25,10 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 import pandas as pd
 
+SCHEMA = 2                                     # bei Formatänderung erhöhen: erzwingt eine sofortige Neuberechnung (siehe update.py)
 HORIZONS = {"1m": 21, "3m": 63}               # Handelstage
-PERIODS = {"1y": 252, "3y": 756, "5y": 1260, "max": None}
+PERIODS = {"4w": 20, "3mo": 63, "6mo": 126, "1y": 252, "3y": 756, "5y": 1260, "max": None}
+DAILY_MAX = 130                                # Zeiträume bis zu dieser Länge werden tageweise, längere wochenweise gespeichert
 STRIP_DAYS = 252
 CURRENCIES = ("usd", "eur", "try")
 CLOSE_UTC = (23, 30)                           # danach gilt die Handelssitzung des Tages als abgeschlossen
@@ -201,12 +203,19 @@ def build(gold: pd.Series, silver: pd.Series, real: pd.Series, eurusd: pd.Series
         lo = 0 if length is None else len(sf) - length
         w = slice(lo, len(sf))
         dates = sf.index[w]
-        widx = _weekly_idx(dates)
+        widx = list(range(len(dates))) if len(dates) <= DAILY_MAX else _weekly_idx(dates)
         p = {"start": dates[0].strftime("%Y-%m-%d"), "end": dates[-1].strftime("%Y-%m-%d"), "days": len(dates),
              "t": [dates[i].strftime("%Y-%m-%d") for i in widx], "strategy": {}, "hold": {}, "summary": {}, "stats": {}}
         eq0, pos0 = simulate(px["usd"][w], list(groups[w]))                  # Position hängt nur vom Signal (USD) ab
         p["out"] = [int(pos0[i] == 0) for i in widx]
         p["episodes"] = _episodes(groups[w])
+        # Signalwechsel: Start ist "investiert"; "k" = Index in den gespeicherten (ggf. wochenweisen) Kurven
+        prev_pos = np.concatenate(([1.0], pos0[:-1]))
+        p["trades"] = [{"d": dates[i].strftime("%Y-%m-%d"), "a": "buy" if pos0[i] == 1 else "sell",
+                        "k": int(np.searchsorted(widx, i)), **{c: _r(px[c][w][i], 2) for c in CURRENCIES}}
+                       for i in np.flatnonzero(pos0 != prev_pos)]
+        p["price0"] = {c: _r(px[c][w][0], 2) for c in CURRENCIES}
+        p["price1"] = {c: _r(px[c][w][-1], 2) for c in CURRENCIES}
         for c in CURRENCIES:
             pr = px[c][w]
             if not np.isfinite(pr).all():
@@ -218,13 +227,13 @@ def build(gold: pd.Series, silver: pd.Series, real: pd.Series, eurusd: pd.Series
             p["summary"][c] = {
                 "strategy": _r(eq[-1] - 100), "hold": _r(hold[-1] - 100),
                 "dd_strategy": _r(max_drawdown(eq) * 100), "dd_hold": _r(max_drawdown(hold) * 100),
-                "trades": int((np.diff(pos) != 0).sum()), "invested": _r(pos.mean() * 100, 0),
+                "trades": len(p["trades"]), "invested": _r(pos.mean() * 100, 0),
             }
             p["stats"][c] = {h: _stats(groups[w], fwd[(c, h)][w], calm[(c, h)]) for h in HORIZONS}
         periods[key] = p
 
     return {
-        "generated": now.isoformat(timespec="minutes"), "start": sf.index[0].strftime("%Y-%m-%d"), "end": sf.index[-1].strftime("%Y-%m-%d"),
+        "schema": SCHEMA, "generated": now.isoformat(timespec="minutes"), "start": sf.index[0].strftime("%Y-%m-%d"), "end": sf.index[-1].strftime("%Y-%m-%d"),
         "horizons": HORIZONS, "calm": {f"{c}_{h}": _r(v * 100, 2) for (c, h), v in calm.items()},
         "strip": strip, "periods": periods,
     }
