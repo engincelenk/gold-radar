@@ -21,7 +21,7 @@ class BudgetTest(unittest.TestCase):
         self.assertFalse(ok)
 
     def test_never_exceeds_budget_even_with_frequent_calls(self):
-        """Simuliert einen Lauf alle 15 Minuten für einen vollen 30-Tage-Monat: Aufrufe bleiben unter dem Budget."""
+        """Simuliert einen Lauf alle 15 Minuten (Extremfall) für einen vollen 30-Tage-Monat: Aufrufe bleiben unter dem Budget."""
         now = datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc)
         end = now + timedelta(days=30)
         usage, calls = {}, 0

@@ -1,12 +1,12 @@
 name: Gold-Radar Update
 
 # Auslöser:
-#  1. Cloudflare-Worker "gold-radar-wecker" (siehe worker/): startet alle 15 Minuten auf die Minute genau per workflow_dispatch (source=cloudflare)
-#  2. Reserve-Zeitplan von GitHub (Best Effort, oft verspätet). Läuft nur, wenn der Stand älter als 10 Minuten ist
+#  1. Cloudflare-Worker "gold-radar-wecker" (siehe worker/): startet 5-mal am Tag (6, 10, 14, 18, 22 Uhr UTC) auf die Minute genau per workflow_dispatch (source=cloudflare)
+#  2. Reserve-Zeitplan von GitHub (Best Effort, oft verspätet), je 40 Minuten nach dem Wecker. Läuft nur, wenn der Stand älter als 60 Minuten ist
 #  3. Manuell ("Run workflow") und nach Code-Änderungen (Push)
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"   # versetzt zu :00/:15/:30/:45, wo GitHub am stärksten ausgelastet ist
+    - cron: "40 6,10,14,18,22 * * *"   # 40 Min. nach dem Wecker; nur wirksam, wenn dieser ausgefallen ist
   workflow_dispatch:
     inputs:
       source:
@@ -64,7 +64,7 @@ jobs:
           skip = False
           try:
               age = datetime.now(timezone.utc) - datetime.fromisoformat(json.load(open("docs/data.json", encoding="utf-8"))["updated"])
-              skip = age.total_seconds() < 600
+              skip = age.total_seconds() < 3600
               print(f"Stand ist {age.total_seconds() / 60:.0f} Min. alt -> " + ("überspringen" if skip else "aktualisieren"))
           except Exception as e:
               print(f"Alter nicht lesbar ({e}) -> aktualisieren")

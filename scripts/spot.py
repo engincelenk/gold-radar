@@ -9,8 +9,9 @@ Der Future weicht vom Spotpreis ab, den z. B. finanzen.net oder die Deutsche Bö
 Statt eines festen Intervalls verteilt `should_fetch()` ein Monatsbudget (Standard 950, Puffer
 unter dem Limit von 1.000) gleichmäßig über den Kalendermonat: Läuft ein Update seltener als
 geplant (Ausfall, Pause), holt die Steuerung automatisch auf, sobald wieder Zeit im Budget ist.
-Im Schnitt ergibt das bei einem Lauf alle 15 Minuten (2.880 Läufe/Monat) einen Abstand von
-rund 46 Minuten zwischen den Spotpreis-Abrufen; ganz ohne API-Key wird gar nicht erst versucht.
+Bei 5 Läufen am Tag (ca. 150/Monat) reicht das Budget für jeden Lauf; die Steuerung greift erst, wenn
+häufiger gelaufen wird (bei einem Lauf alle 15 Minuten wären es rund 46 Minuten Abstand).
+Ganz ohne API-Key wird gar nicht erst versucht.
 """
 from __future__ import annotations
 

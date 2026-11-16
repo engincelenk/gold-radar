@@ -124,17 +124,17 @@ def site_get(path: str) -> tuple[int, bytes]:
 
 
 def freshness(updated: str) -> str:
-    """Der Workflow läuft alle 15 Minuten; bis 90 Minuten Alter gilt als normal (GitHub startet geplante Läufe verspätet)."""
+    """Der Workflow läuft 5-mal am Tag (größter Abstand 8 Std. über Nacht); bis 9 Std. Alter gilt als normal."""
     upd = datetime.fromisoformat(updated)
     minutes = (datetime.now(timezone.utc) - upd).total_seconds() / 60
     age = f"{minutes:.0f} Min." if minutes < 180 else f"{minutes / 60:.1f} Std."
-    if minutes > 90:
-        return f"VERALTET – Daten von {upd:%a %d.%m. %H:%M} UTC (vor {age}), der 15-Minuten-Lauf stockt. Actions prüfen: https://github.com/{REPO}/actions"
+    if minutes > 540:
+        return f"VERALTET – Daten von {upd:%a %d.%m. %H:%M} UTC (vor {age}), der Lauf stockt. Actions prüfen: https://github.com/{REPO}/actions"
     return f"aktuell (Daten von {upd:%H:%M} UTC, vor {age})"
 
 
 def data_get() -> dict:
-    """Aktueller Stand: erst der Branch 'data' (alle 15 Min.), sonst die täglich committete docs/data.json der Seite."""
+    """Aktueller Stand: erst der Branch 'data' (5-mal am Tag), sonst die täglich committete docs/data.json der Seite."""
     for url in (f"https://raw.githubusercontent.com/{REPO}/data/data.json?t={int(time.time())}", None):
         try:
             if url:

@@ -19,8 +19,8 @@ python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Son
 
 ## Wichtig
 
-- `docs/data.json` erzeugt der Workflow (`scripts/update.py`). Nicht von Hand ändern. Der aktuelle Stand liegt im Branch `data` (alle 15 Minuten überschrieben, die Seite lädt ihn von dort); nach `main` committet der Bot nur einen Tages-Snapshot (22 Uhr UTC) als Rückfall.
-- Der Workflow startet: alle 15 Minuten durch den Cloudflare-Worker `gold-radar-wecker` (`worker/`, workflow_dispatch mit `source=cloudflare`), als Reserve durch GitHubs Cron (`7,22,37,52 * * * *`, überspringt sich bei frischen Daten), manuell (Actions → Run workflow) und bei Push auf `scripts/**`, `requirements.txt`, `daily.yml`. Push-Nachrichten (`--notify`) und Tages-Snapshot nur im 22-Uhr-Lauf bzw. bei manuellem/Code-Start.
+- `docs/data.json` erzeugt der Workflow (`scripts/update.py`). Nicht von Hand ändern. Der aktuelle Stand liegt im Branch `data` (5-mal am Tag überschrieben, die Seite lädt ihn von dort); nach `main` committet der Bot nur einen Tages-Snapshot (22 Uhr UTC) als Rückfall.
+- Der Workflow startet: 5-mal am Tag (6, 10, 14, 18, 22 Uhr UTC) durch den Cloudflare-Worker `gold-radar-wecker` (`worker/`, workflow_dispatch mit `source=cloudflare`), als Reserve durch GitHubs Cron (`40 6,10,14,18,22 * * *`, überspringt sich bei Daten unter 60 Min. Alter), manuell (Actions → Run workflow) und bei Push auf `scripts/**`, `requirements.txt`, `daily.yml`. Push-Nachrichten (`--notify`) und Tages-Snapshot nur im 22-Uhr-Lauf bzw. bei manuellem/Code-Start.
 - Der Worker braucht das Cloudflare-Secret `GITHUB_TOKEN` (Fine-grained, nur dieses Repo, Actions: Read and write). Tokens nie in Dateien oder Chat schreiben. Test: `node worker/test.mjs`.
 - Vor `git pull`/`push` von Hand bedenken: `main` bekommt Bot-Commits; `deploy.py` rebased automatisch.
 - Nachrichten-Regeln: `RULES` in `scripts/news.py`. Kauf-/Verkaufssignal: `CFG` in `scripts/update.py`.

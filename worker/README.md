@@ -1,7 +1,7 @@
 # Gold-Radar Wecker (Cloudflare Worker)
 
 GitHubs eigener Zeitplan ist Best Effort: Läufe starten verspätet oder gar nicht. Dieser Worker startet den
-Workflow „Gold-Radar Update“ alle 15 Minuten auf die Minute genau per GitHub-API. Kosten: 0 € (Cloudflare Free-Tarif,
+Workflow „Gold-Radar Update“ 5-mal am Tag (6, 10, 14, 18, 22 Uhr UTC) auf die Minute genau per GitHub-API. Kosten: 0 € (Cloudflare Free-Tarif,
 96 Aufrufe pro Tag bei 100.000 erlaubten).
 
 Der Zeitplan in `.github/workflows/daily.yml` (`7,22,37,52 * * * *`) bleibt als Reserve. Er überspringt sich selbst, wenn der Wecker
@@ -22,7 +22,7 @@ GitHub → Settings → Developer settings → Personal access tokens → **Fine
 ```powershell
 cd C:\Projects\Gold-Radar\worker
 npx wrangler login        # öffnet den Browser, bei Cloudflare anmelden und erlauben
-npx wrangler deploy       # legt den Worker "gold-radar-wecker" mit Cron */15 an
+npx wrangler deploy       # legt den Worker "gold-radar-wecker" mit Cron 0 6,10,14,18,22 * * * an
 ```
 
 ### 3. Token als Secret hinterlegen
@@ -33,10 +33,10 @@ npx wrangler secret put GITHUB_TOKEN     # Token einfügen und Enter; er erschei
 ### Alternative ohne Konsole (Cloudflare-Dashboard)
 Workers & Pages → Create → Create Worker → Name `gold-radar-wecker` → Deploy → Edit code → Inhalt von `index.js` einfügen → Deploy.
 Danach Settings → Variables and Secrets → Add → Typ **Secret**, Name `GITHUB_TOKEN`, Wert = Token.
-Settings → Trigger Events → Cron Triggers → Add → `*/15 * * * *`.
+Settings → Trigger Events → Cron Triggers → Add → `0 6,10,14,18,22 * * *`.
 
 ### 4. Prüfen
-- Nach spätestens 15 Minuten erscheint unter GitHub → Actions ein Lauf „Gold-Radar Update“ mit „Manually run by …“ (source=cloudflare).
+- Zur nächsten Slot-Zeit (6, 10, 14, 18 oder 22 Uhr UTC) erscheint unter GitHub → Actions ein Lauf „Gold-Radar Update“ mit „Manually run by …“ (source=cloudflare).
 - Cloudflare → Workers → gold-radar-wecker → Logs zeigt „Workflow gestartet“. Bei Fehlern steht dort der Grund (401 = Token falsch/abgelaufen,
   403 = Recht „Actions: Read and write“ fehlt, 404 = Token hat keinen Zugriff auf das Repo).
 - `python deploy.py --status` zeigt die Frische der Daten.

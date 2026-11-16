@@ -23,7 +23,7 @@ Schwellen anpassen: `CFG` oben in `scripts/update.py`.
 3. **Dashboard veröffentlichen:** *Settings → Pages → Source: Deploy from a branch → Branch `main`, Ordner `/docs`*.
 4. **Erster Lauf:** *Actions → Gold-Radar Update → Run workflow*. Nach ca. 1 Minute kommt die erste Push-Nachricht, und das Dashboard ist unter `https://<dein-name>.github.io/<repo>/` erreichbar.
 
-Danach läuft alles automatisch **alle 15 Minuten**. GitHubs eigener Zeitplan ist unzuverlässig (Läufe kommen verspätet oder gar nicht),
+Danach läuft alles automatisch **5-mal am Tag** (6, 10, 14, 18 und 22 Uhr UTC). GitHubs eigener Zeitplan ist unzuverlässig (Läufe kommen verspätet oder gar nicht),
 deshalb startet ein kleiner Cloudflare-Worker den Workflow auf die Minute genau (`worker/`, Einrichtung dort in der README).
 Der GitHub-Zeitplan läuft als Reserve mit und überspringt sich, wenn die Daten frisch sind.
 Eine Push-Nachricht kommt nur im Tagesabschluss-Lauf (22 Uhr UTC), und nur wenn sich das Signal seit der letzten Meldung geändert hat.
@@ -33,7 +33,7 @@ Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Act
 - Jeder Lauf schreibt den aktuellen Stand als einzelnen Commit in den Branch **`data`** (wird überschrieben, die Historie wächst nicht).
   Die Seite lädt `https://raw.githubusercontent.com/engincelenk/gold-radar/data/data.json` und lädt sich alle 5 Minuten selbst neu.
 - Einmal pro Tag (22 Uhr UTC) und bei jedem Code-Start committet der Bot zusätzlich `docs/data.json` nach `main`. Das ist der Rückfall der Seite, falls der `data`-Branch nicht erreichbar ist.
-- Die Seite warnt, wenn die Daten älter als 3 Stunden sind. `python deploy.py --status` zeigt die Frische ebenfalls an.
+- Die Seite warnt, wenn die Daten älter als 9 Stunden sind. `python deploy.py --status` zeigt die Frische ebenfalls an.
 
 ## Spotpreis (optional, zusätzlich zum Future)
 Der Future `GC=F` (Chart, Signale) weicht üblicherweise 0,2–1 % vom Spotpreis ab, den z. B. finanzen.net oder die
@@ -45,9 +45,9 @@ Deutsche Börse zeigen (Termin- vs. Kassamarkt). `scripts/spot.py` holt zusätzl
 2. GitHub → Repo → *Settings → Secrets and variables → Actions → New repository secret* → Name `GOLDPRICE_API_KEY`, Wert = der Key.
 
 Der Gratis-Plan erlaubt 1.000 Anrufe/Monat. `scripts/spot.py` (`should_fetch`) verteilt ein Budget von 950 gleichmäßig
-über den Kalendermonat statt ein festes Intervall zu nutzen – das entspricht im Schnitt ca. 45–46 Minuten zwischen zwei
-Abrufen bei einem Lauf alle 15 Minuten, holt nach einer Pause aber automatisch auf und überschreitet das Budget nie.
-Getestet in `tests/test_spot.py`, u. a. mit einem simulierten 30-Tage-Monat im 15-Minuten-Takt.
+über den Kalendermonat statt ein festes Intervall zu nutzen – bei 5 Läufen am Tag (ca. 150/Monat) wird bei jedem Lauf abgerufen,
+die Steuerung greift erst bei häufigeren Läufen, holt nach einer Pause automatisch auf und überschreitet das Budget nie.
+Getestet in `tests/test_spot.py`, u. a. mit einem simulierten 30-Tage-Monat im (extremen) 15-Minuten-Takt.
 
 ## Rückblick: Lag das Signal richtig?
 `scripts/backtest.py` rechnet die vier Werkzeuge mit denselben Schwellen (`CFG`) für jeden Handelstag der letzten ca. 9 Jahre nach
