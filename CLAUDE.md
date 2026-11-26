@@ -1,7 +1,8 @@
 # Gold-Radar
 
 Statisches Dashboard (GitHub Pages, `docs/`) mit täglichem Update per GitHub Actions.
-Repo: https://github.com/engincelenk/gr · Live: https://gr.immofuchs.info (die Domain ohne `www` ist in den Pages-Einstellungen hinterlegt, `docs/CNAME` nicht von Hand ändern; `www.gr…` leitet weiter) · Branch: `main`
+Repo: https://github.com/engincelenk/gr · Live: https://www.itx-consulting.de/gr/ · Branch: `main`
+GitHub Pages ist in diesem Repo aus: Das Website-Repo `engincelenk/itx-consulting` holt `docs/` beim Ausliefern ab (`.github/workflows/pages.yml`: bei jedem Push dort, nachts oder per „Run workflow“). Änderungen an `docs/` sind erst danach online; die Kursdaten kommen sofort aus dem Branch `data`. In `docs/` nur relative Pfade verwenden.
 
 ## Deploy (auf Zuruf: „deploy“, „bring das live“, „push das“)
 
@@ -11,7 +12,7 @@ Immer über das Skript, nie von Hand mit git:
 python deploy.py -m "<kurze Beschreibung der Änderung>" --co-author "Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
 
-- Committet alle Änderungen, holt Bot-Commits per Rebase, pusht, wartet auf Workflow und Pages-Build und prüft die Live-Seite.
+- Committet alle Änderungen, holt Bot-Commits per Rebase, pusht, wartet auf den Workflow und prüft die Live-Seite.
 - Die Ausgabe dem Nutzer kurz berichten (Commit, Workflow-Ergebnis, Live-Signal). Bei Fehlern die Meldung wörtlich wiedergeben.
 - Nur Stand ansehen: `python deploy.py --status`. Vorschau: `python deploy.py --dry-run`.
 - Nie force-pushen, keine Hooks umgehen. Bei Rebase-Konflikt (Exit-Code 2) oder fehlenden Rechten (Exit-Code 3) stoppen und den Nutzer fragen.

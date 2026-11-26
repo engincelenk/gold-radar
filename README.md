@@ -20,7 +20,7 @@ Schwellen anpassen: `CFG` oben in `scripts/update.py`.
    - Einen schwer erratbaren Topic-Namen ausdenken, z. B. `goldradar-7f3k9q`, und in der App abonnieren.
    - Im Repo: *Settings → Secrets and variables → Actions → New repository secret* → Name `NTFY_TOPIC`, Wert = dein Topic.
    - Optional Telegram: Secrets `TELEGRAM_TOKEN` und `TELEGRAM_CHAT_ID`.
-3. **Dashboard veröffentlichen:** *Settings → Pages → Source: Deploy from a branch → Branch `main`, Ordner `/docs`*.
+3. **Dashboard veröffentlichen:** Die Seite erscheint unter https://www.itx-consulting.de/gr/. Das Website-Repo `itx-consulting` holt dafür den Ordner `docs/` ab (nachts oder dort per „Run workflow“). In diesem Repo ist GitHub Pages aus.
 4. **Erster Lauf:** *Actions → Gold-Radar Update → Run workflow*. Nach ca. 1 Minute kommt die erste Push-Nachricht, und das Dashboard ist unter `https://<dein-name>.github.io/<repo>/` erreichbar.
 
 Danach läuft alles automatisch **5-mal am Tag** (6, 10, 14, 18 und 22 Uhr UTC). GitHubs eigener Zeitplan ist unzuverlässig (Läufe kommen verspätet oder gar nicht),

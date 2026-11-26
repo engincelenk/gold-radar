@@ -10,7 +10,10 @@ Gold-Radar – Deploy auf GitHub in einem Befehl (nur Standardbibliothek).
 
 Ablauf: Änderungen stagen -> committen -> vom Server holen (rebase, damit Bot-Commits
 mit neuen Daten kein Problem sind) -> pushen -> auf den GitHub-Workflow und den Pages-Build
-warten -> prüfen, dass https://gr.immofuchs.info die neuen Daten ausliefert.
+warten -> prüfen, dass https://www.itx-consulting.de/gr/ erreichbar ist.
+
+Die Seite selbst liefert das Website-Repo (itx-consulting) aus: Es holt docs/ von hier ab.
+Änderungen an docs/ sind erst nach dessen nächstem Lauf online (nachts oder von Hand).
 Nie force-push. Bei Konflikten oder Rechte-Fehlern wird abgebrochen und erklärt.
 """
 from __future__ import annotations
@@ -33,10 +36,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = "engincelenk/gr"
 BRANCH = "main"
-SITE = "gr.immofuchs.info"
+SITE = "www.itx-consulting.de"
+SITE_PATH = "/gr"
+SITE_URL = f"https://{SITE}{SITE_PATH}/"
+SITE_ACTIONS = "https://github.com/engincelenk/itx-consulting/actions/workflows/pages.yml"
 PAGES_IP = "185.199.108.153"  # GitHub Pages, Fallback wenn der lokale DNS-Cache die neue Domain noch nicht kennt
 WORKFLOW = "Gold-Radar Update"
-PAGES_RUN = "pages build and deployment"
 FALLBACK_IDENTITY = ("Gold-Radar Setup", "setup@users.noreply.github.com")
 SECRET_PATTERNS = (".env", ".env.*", "*.pem", "*.key", "id_rsa*", "*secret*", "*token*", "*.pfx")
 POLL = 10
@@ -108,7 +113,7 @@ class _IPConn(http.client.HTTPSConnection):
 
 def site_get(path: str) -> tuple[int, bytes]:
     sep = "&" if "?" in path else "?"
-    path = f"{path}{sep}x={int(time.time())}"
+    path = f"{SITE_PATH}{path}{sep}x={int(time.time())}"
     headers = {"User-Agent": "gold-radar-deploy", "Cache-Control": "no-cache"}
     try:
         req = urllib.request.Request(f"https://{SITE}{path}", headers=headers)
@@ -153,7 +158,7 @@ def live_report() -> bool:
         d = data_get()
         n = d.get("news") or {}
         code, _ = site_get("/")
-        say(f"  Live-Seite https://{SITE}: {'OK' if code == 200 else f'HTTP {code}'}")
+        say(f"  Live-Seite {SITE_URL}: {'OK' if code == 200 else f'HTTP {code}'}")
         say(f"    Signal: {d['verdict']} (Score {d['score']:+d}), Stand {d['as_of']}, aktualisiert {d.get('updated')}")
         say(f"    Charts: {', '.join(d.get('charts', {})) or 'keine'} | News: {n.get('label', 'keine')}")
         say(f"    Frische: {freshness(d['updated'])}")
@@ -191,7 +196,7 @@ def status() -> int:
     say(f"Vor origin: {ahead} Commit(s), hinter origin: {behind} Commit(s)")
     say("Letzte Commits:\n" + out("log", "--oneline", "-5"))
     try:
-        for r in [x for x in api_runs() if x["name"] in (WORKFLOW, PAGES_RUN)][:4]:
+        for r in [x for x in api_runs() if x["name"] == WORKFLOW][:4]:
             say(f"  {r['name']}: {r['status']} {r['conclusion'] or ''} ({r['created_at']})")
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
         say(f"  (GitHub-API nicht erreichbar: {e})")
@@ -263,6 +268,7 @@ def deploy(args: argparse.Namespace) -> int:
         say("Nichts zu deployen: lokal und GitHub sind identisch.")
         live_report()
         return 0
+    before = out("rev-parse", f"origin/{BRANCH}")
     say(f"Pushe {ahead} Commit(s) nach origin/{BRANCH} …")
     push()
     sha = out("rev-parse", "HEAD")
@@ -270,7 +276,6 @@ def deploy(args: argparse.Namespace) -> int:
     if args.no_wait:
         return 0
 
-    final = sha
     say("Warte auf den Workflow …")
     run = wait_run(WORKFLOW, sha, appear=45, limit=360)
     if run is None:
@@ -288,17 +293,10 @@ def deploy(args: argparse.Namespace) -> int:
                 break
             time.sleep(5)
         git("pull", "--ff-only", "origin", BRANCH, check=False)
-        final = out("rev-parse", "HEAD")
 
-    say("Warte auf GitHub Pages …")
-    pages = wait_run(PAGES_RUN, final, appear=90, limit=240)
-    if pages is None:
-        say("  Kein Pages-Build gefunden (evtl. verzögert).")
-    elif pages["status"] == "completed" and pages["conclusion"] != "success":
-        say(f"  PAGES-BUILD FEHLGESCHLAGEN ({pages['conclusion']}): {pages['html_url']}")
-        return 5
-    else:
-        say(f"  Pages: {pages['status']} {pages['conclusion'] or ''}")
+    if any(f.startswith("docs/") for f in out("diff", "--name-only", f"{before}..{sha}").splitlines()):
+        say("Änderungen an docs/ gehen mit dem nächsten Lauf des Website-Repos online (nachts),")
+        say(f"sofort über „Run workflow“: {SITE_ACTIONS}")
     ok = live_report()
     say("\nDeploy abgeschlossen." if ok else "\nDeploy gepusht, Live-Prüfung aber ohne Erfolg – bitte später erneut mit --status prüfen.")
     return 0 if ok else 6
