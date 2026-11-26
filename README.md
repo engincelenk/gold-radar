@@ -31,7 +31,7 @@ Für eine tägliche Zusammenfassung: *Settings → Secrets and variables → Act
 
 ### Wie die Daten zur Seite kommen
 - Jeder Lauf schreibt den aktuellen Stand als einzelnen Commit in den Branch **`data`** (wird überschrieben, die Historie wächst nicht).
-  Die Seite lädt `https://raw.githubusercontent.com/engincelenk/gold-radar/data/data.json` und lädt sich alle 5 Minuten selbst neu.
+  Die Seite lädt `https://raw.githubusercontent.com/engincelenk/gr/data/data.json` und lädt sich alle 5 Minuten selbst neu.
 - Einmal pro Tag (22 Uhr UTC) und bei jedem Code-Start committet der Bot zusätzlich `docs/data.json` nach `main`. Das ist der Rückfall der Seite, falls der `data`-Branch nicht erreichbar ist.
 - Die Seite warnt, wenn die Daten älter als 9 Stunden sind. `python deploy.py --status` zeigt die Frische ebenfalls an.
 

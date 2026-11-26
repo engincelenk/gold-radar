@@ -7,7 +7,7 @@
  *
  * Nötig: Secret GITHUB_TOKEN (Fine-grained Token, nur dieses Repo, Berechtigung "Actions: Read and write").
  */
-const REPO = "engincelenk/gold-radar";
+const REPO = "engincelenk/gr";
 const WORKFLOW = "daily.yml";
 const REF = "main";
 

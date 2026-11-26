@@ -31,7 +31,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-REPO = "engincelenk/gold-radar"
+REPO = "engincelenk/gr"
 BRANCH = "main"
 SITE = "gr.immofuchs.info"
 PAGES_IP = "185.199.108.153"  # GitHub Pages, Fallback wenn der lokale DNS-Cache die neue Domain noch nicht kennt
@@ -74,8 +74,8 @@ def ensure_repo() -> None:
         raise Abort(f"Kein Git-Repository in {ROOT} (oder git fehlt): {e}") from e
     if not os.path.samefile(top, ROOT):  # nie versehentlich ein übergeordnetes Repo (z. B. C:\) anfassen
         raise Abort(f"{ROOT} ist nicht die Wurzel eines eigenen Git-Repos (gefunden: {top}). Abbruch.")
-    if "engincelenk/gold-radar" not in out("remote", "get-url", "origin"):
-        raise Abort("Remote 'origin' zeigt nicht auf engincelenk/gold-radar. Abbruch.")
+    if "engincelenk/gr" not in out("remote", "get-url", "origin"):
+        raise Abort("Remote 'origin' zeigt nicht auf engincelenk/gr. Abbruch.")
     branch = out("rev-parse", "--abbrev-ref", "HEAD")
     if branch != BRANCH:
         raise Abort(f"Aktueller Branch ist '{branch}', deployed wird nur '{BRANCH}'. Bitte zuerst wechseln.")

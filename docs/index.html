@@ -582,7 +582,7 @@ function renderNews() {
 
 /* ---------- Rückblick: Lag das Signal richtig? ---------- */
 const BT_SOURCES = [
-  () => `https://raw.githubusercontent.com/engincelenk/gold-radar/data/backtest.json?t=${Math.floor(Date.now() / 60000)}`,
+  () => `https://raw.githubusercontent.com/engincelenk/gr/data/backtest.json?t=${Math.floor(Date.now() / 60000)}`,
   () => `backtest.json?t=${Math.floor(Date.now() / 60000)}`
 ];
 const BT_PERIODS = [["4w", "4 Wochen"], ["3mo", "3 Monate"], ["6mo", "6 Monate"], ["1y", "1 Jahr"], ["3y", "3 Jahre"], ["5y", "5 Jahre"], ["max", "Max"]];
@@ -946,7 +946,7 @@ syncCurButtons();
 
 /* Der Workflow schreibt 5-mal am Tag in den Branch "data"; docs/data.json ist der tägliche Rückfall. Es gilt der neuere Stand. */
 const SOURCES = [
-  () => `https://raw.githubusercontent.com/engincelenk/gold-radar/data/data.json?t=${Math.floor(Date.now() / 60000)}`,
+  () => `https://raw.githubusercontent.com/engincelenk/gr/data/data.json?t=${Math.floor(Date.now() / 60000)}`,
   () => `data.json?t=${Math.floor(Date.now() / 60000)}`
 ];
 async function loadData() {

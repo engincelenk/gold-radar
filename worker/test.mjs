@@ -17,7 +17,7 @@ const reset = () => (calls.length = 0);
 respond(204);
 await dispatch({ GITHUB_TOKEN: "t0ken" });
 assert.equal(calls.length, 1);
-assert.equal(calls[0].url, "https://api.github.com/repos/engincelenk/gold-radar/actions/workflows/daily.yml/dispatches");
+assert.equal(calls[0].url, "https://api.github.com/repos/engincelenk/gr/actions/workflows/daily.yml/dispatches");
 assert.equal(calls[0].init.method, "POST");
 assert.equal(calls[0].init.headers.Authorization, "Bearer t0ken");
 assert.deepEqual(JSON.parse(calls[0].init.body), { ref: "main", inputs: { source: "cloudflare" } });

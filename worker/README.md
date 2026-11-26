@@ -14,7 +14,7 @@ GitHub → Settings → Developer settings → Personal access tokens → **Fine
 
 - Name: `gold-radar-wecker`
 - Expiration: z. B. 1 Jahr (danach neu erstellen und Schritt 4 wiederholen)
-- Repository access: **Only select repositories** → `gold-radar`
+- Repository access: **Only select repositories** → `gr`
 - Repository permissions → **Actions: Read and write** (Metadata: Read-only kommt automatisch)
 - Token kopieren. Er wird nur einmal angezeigt.
 
